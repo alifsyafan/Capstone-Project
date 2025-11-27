@@ -76,7 +76,7 @@ export default function Home() {
               <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nomor Telepon
+                    Nomor Telepon/WhatsApp
                   </label>
                   <input
                     type="text"
@@ -113,10 +113,11 @@ export default function Home() {
                 </label>
                 <select className="w-full px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base text-gray-900">
                   <option>Pilih jenis perizinan</option>
-                  <option>Perizinan Tenaga Kesehatan</option>
-                  <option>Izin Sarana Kesehatan</option>
-                  <option>Sertifikasi Alat Kesehatan</option>
-                  <option>Perizinan Praktik Mandiri</option>
+                  <option>Izin Penelitian</option>
+                  <option>Izin Pengambilan Data Awal</option>
+                  <option>Izin Permohonan Magang</option>
+                  <option>Izin Kepaniteraan Klinik (Coas)</option>
+                  <option>Izin Kunjungan Lapangan</option>
                 </select>
               </div>
 
