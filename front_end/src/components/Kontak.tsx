@@ -19,7 +19,7 @@ export default function Kontak() {
               </svg>
             </div>
             <h3 className="text-xl font-bold text-blue-900 mb-3">Alamat</h3>
-            <p className="text-gray-600">Jl. Teduh Bersinar No.1, Gn. Sari <br />Kecamatan Rappocini<br />Kota Makassar<br />Sulawesi Selatan 90221</p>
+            <p className="text-gray-600 mb-2 text-sm">Jl. Teduh Bersinar No.1, Gn. Sari <br />Kecamatan Rappocini<br />Kota Makassar<br />Sulawesi Selatan 90221</p>
           </div>
           
           <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl shadow-lg p-6 sm:p-8 border border-blue-100 text-center hover:shadow-xl transition-shadow">
@@ -29,8 +29,8 @@ export default function Kontak() {
               </svg>
             </div>
             <h3 className="text-xl font-bold text-blue-900 mb-3">Telepon</h3>
-            <p className="text-gray-600 mb-2">(0411) 881549</p>
-            <p className="text-sm text-gray-500 mt-2">Senin - Jumat: 08:00 - 16:00</p>
+            <p className="text-gray-600 mb-2 text-sm">(0411) 881549</p>
+            <p className="text-sm text-gray-500 mt-2 text-sm">Senin - Jumat: 08:00 - 16:00</p>
           </div>
           
           <div className="bg-gradient-to-br from-blue-50 to-white rounded-xl shadow-lg p-6 sm:p-8 border border-blue-100 text-center hover:shadow-xl transition-shadow">
@@ -40,8 +40,8 @@ export default function Kontak() {
               </svg>
             </div>
             <h3 className="text-xl font-bold text-blue-900 mb-3">Email</h3>
-            <p className="text-blue-600 font-medium break-all mb-2">psdkdinkeskotamakassar@gmail.com</p>
-            <p className="text-sm text-gray-500 mt-2">Respon dalam 1x24 jam</p>
+            <p className="text-blue-600 font-medium break-all mb-2 text-sm">psdkdinkeskotamakassar@gmail.com</p>
+            <p className="text-sm text-gray-500 mt-2 text-sm">Respon dalam 1x24 jam</p>
           </div>
         </div>
       </div>
