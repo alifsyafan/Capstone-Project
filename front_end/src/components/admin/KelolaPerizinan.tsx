@@ -5,9 +5,9 @@ import { JenisPerizinan } from "@/types";
 
 interface KelolaPerizinanProps {
   jenisPerizinanList: JenisPerizinan[];
-  onTambah: (perizinan: Omit<JenisPerizinan, 'id' | 'createdAt'>) => void;
-  onEdit: (perizinan: JenisPerizinan) => void;
-  onHapus: (id: string) => void;
+  onTambah: (perizinan: Omit<JenisPerizinan, 'id' | 'createdAt'>) => void | Promise<void>;
+  onEdit: (perizinan: JenisPerizinan) => void | Promise<void>;
+  onHapus: (id: string) => void | Promise<void>;
 }
 
 export default function KelolaPerizinan({ jenisPerizinanList, onTambah, onEdit, onHapus }: KelolaPerizinanProps) {

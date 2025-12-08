@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { authAPI } from "@/lib/api";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -13,12 +14,6 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  // Kredensial admin (dalam produksi, ini harus divalidasi di backend)
-  const ADMIN_CREDENTIALS = {
-    username: "admin",
-    password: "admin123",
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -34,19 +29,24 @@ export default function AdminLogin() {
     setIsLoading(true);
     setError("");
 
-    // Simulasi delay untuk autentikasi
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const response = await authAPI.login({
+        username: formData.username,
+        password: formData.password,
+      });
 
-    if (
-      formData.username === ADMIN_CREDENTIALS.username &&
-      formData.password === ADMIN_CREDENTIALS.password
-    ) {
-      // Simpan status login ke localStorage
-      localStorage.setItem("adminLoggedIn", "true");
-      localStorage.setItem("adminLoginTime", new Date().toISOString());
-      router.push("/admin");
-    } else {
-      setError("Username atau password salah!");
+      if (response.success && response.data) {
+        // Simpan token dan status login ke localStorage
+        localStorage.setItem("adminToken", response.data.token);
+        localStorage.setItem("adminLoggedIn", "true");
+        localStorage.setItem("adminLoginTime", new Date().toISOString());
+        localStorage.setItem("adminData", JSON.stringify(response.data.admin));
+        router.push("/admin");
+      } else {
+        setError(response.message || "Username atau password salah!");
+      }
+    } catch {
+      setError("Gagal terhubung ke server. Pastikan backend sudah berjalan.");
     }
 
     setIsLoading(false);

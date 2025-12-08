@@ -1,20 +1,121 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Beranda from "@/components/Beranda";
 import TentangKami from "@/components/TentangKami";
 import Layanan from "@/components/Layanan";
 import Kontak from "@/components/Kontak";
+import { jenisPerizinanAPI, permohonanAPI, mapJenisPerizinanToFrontend } from "@/lib/api";
+import { JenisPerizinan } from "@/types";
 
 export default function Home() {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [jenisPerizinanList, setJenisPerizinanList] = useState<JenisPerizinan[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    namaLengkap: "",
+    nomorTelepon: "",
+    email: "",
+    alamat: "",
+    jenisPerizinanId: "",
+    catatan: "",
+  });
 
-  const handleSubmit = (e: { preventDefault: () => void; }) => {
+  // Fetch jenis perizinan saat modal dibuka
+  useEffect(() => {
+    if (isFormOpen) {
+      fetchJenisPerizinan();
+    }
+  }, [isFormOpen]);
+
+  const fetchJenisPerizinan = async () => {
+    try {
+      const response = await jenisPerizinanAPI.getAll(true); // Hanya yang aktif
+      if (response.success && response.data) {
+        const mapped = response.data.map(mapJenisPerizinanToFrontend);
+        setJenisPerizinanList(mapped);
+      }
+    } catch (error) {
+      console.error("Error fetching jenis perizinan:", error);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setSelectedFiles(prev => [...prev, ...files]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const resetForm = () => {
+    setFormData({
+      namaLengkap: "",
+      nomorTelepon: "",
+      email: "",
+      alamat: "",
+      jenisPerizinanId: "",
+      catatan: "",
+    });
+    setSelectedFiles([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert("Form berhasil dikirim!");
-    setIsFormOpen(false);
+    
+    // Validasi
+    if (!formData.namaLengkap || !formData.nomorTelepon || !formData.email || !formData.alamat || !formData.jenisPerizinanId) {
+      alert("Mohon lengkapi semua field yang wajib diisi");
+      return;
+    }
+
+    if (selectedFiles.length === 0) {
+      alert("Mohon upload minimal 1 berkas persyaratan");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await permohonanAPI.create({
+        nama_lengkap: formData.namaLengkap,
+        nomor_telepon: formData.nomorTelepon,
+        email: formData.email,
+        alamat: formData.alamat,
+        jenis_perizinan_id: formData.jenisPerizinanId,
+        catatan: formData.catatan,
+      }, selectedFiles);
+
+      if (response.success) {
+        alert("Permohonan berhasil dikirim! Kami akan menghubungi Anda melalui email.");
+        resetForm();
+        setIsFormOpen(false);
+      } else {
+        alert("Gagal mengirim permohonan: " + response.message);
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alert("Gagal terhubung ke server. Silakan coba lagi.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -33,7 +134,7 @@ export default function Home() {
       {isFormOpen && (
         <div 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 animate-fadeIn"
-          onClick={() => setIsFormOpen(false)}
+          onClick={() => { if (!isSubmitting) { resetForm(); setIsFormOpen(false); } }}
         >
           <div 
             className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col animate-slideUp"
@@ -51,8 +152,9 @@ export default function Home() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setIsFormOpen(false)}
-                  className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+                  onClick={() => { if (!isSubmitting) { resetForm(); setIsFormOpen(false); } }}
+                  disabled={isSubmitting}
+                  className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors disabled:opacity-50"
                   aria-label="Tutup form"
                 >
                   <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,6 +185,9 @@ export default function Home() {
                       </label>
                       <input
                         type="text"
+                        name="namaLengkap"
+                        value={formData.namaLengkap}
+                        onChange={handleInputChange}
                         className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base text-gray-900 transition-all"
                         placeholder="Masukkan nama lengkap"
                       />
@@ -96,6 +201,9 @@ export default function Home() {
                         </label>
                         <input
                           type="tel"
+                          name="nomorTelepon"
+                          value={formData.nomorTelepon}
+                          onChange={handleInputChange}
                           className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base text-gray-900 transition-all"
                           placeholder="089xxxxxxxxx"
                         />
@@ -106,6 +214,9 @@ export default function Home() {
                         </label>
                         <input
                           type="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
                           className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base text-gray-900 transition-all"
                           placeholder="contoh@gmail.com"
                         />
@@ -118,6 +229,9 @@ export default function Home() {
                         Alamat Lengkap <span className="text-red-500">*</span>
                       </label>
                       <textarea
+                        name="alamat"
+                        value={formData.alamat}
+                        onChange={handleInputChange}
                         className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base text-gray-900 transition-all resize-none"
                         rows={3}
                         placeholder="Masukkan alamat lengkap (Jalan, RT/RW, Kelurahan, Kecamatan, Kota)"
@@ -142,14 +256,15 @@ export default function Home() {
                         Jenis Perizinan <span className="text-red-500">*</span>
                       </label>
                       <select 
+                        name="jenisPerizinanId"
+                        value={formData.jenisPerizinanId}
+                        onChange={handleInputChange}
                         className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base text-gray-900 transition-all bg-white"
                       >
                         <option value="">Pilih jenis perizinan</option>
-                        <option value="penelitian">Izin Penelitian</option>
-                        <option value="data-awal">Izin Pengambilan Data Awal</option>
-                        <option value="magang">Izin Permohonan Magang</option>
-                        <option value="coas">Izin Kepaniteraan Klinik (Coas)</option>
-                        <option value="kunjungan">Izin Kunjungan Lapangan</option>
+                        {jenisPerizinanList.map((jp) => (
+                          <option key={jp.id} value={jp.id}>{jp.nama}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -169,12 +284,48 @@ export default function Home() {
                             </svg>
                             Pilih Berkas
                           </label>
-                          <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple accept=".pdf,.doc,.docx" />
+                          <input 
+                            id="file-upload" 
+                            ref={fileInputRef}
+                            name="file-upload" 
+                            type="file" 
+                            className="sr-only" 
+                            multiple 
+                            accept=".pdf,.doc,.docx"
+                            onChange={handleFileChange}
+                          />
                         </div>
                         <p className="text-xs sm:text-sm text-gray-500 mt-2 sm:mt-3">
                           PDF, DOC, DOCX (Maksimal 10MB per file)
                         </p>
                       </div>
+                      
+                      {/* List File yang dipilih */}
+                      {selectedFiles.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          <p className="text-sm font-medium text-gray-700">Berkas terpilih:</p>
+                          {selectedFiles.map((file, index) => (
+                            <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
+                              <div className="flex items-center space-x-2">
+                                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span className="text-sm text-gray-700 truncate max-w-[200px]">{file.name}</span>
+                                <span className="text-xs text-gray-500">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(index)}
+                                className="text-red-500 hover:text-red-700 p-1"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Catatan */}
@@ -183,6 +334,9 @@ export default function Home() {
                         Catatan Tambahan (Opsional)
                       </label>
                       <textarea
+                        name="catatan"
+                        value={formData.catatan}
+                        onChange={handleInputChange}
                         className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base text-gray-900 transition-all resize-none"
                         rows={3}
                         placeholder="Tambahkan catatan atau informasi tambahan jika diperlukan"
@@ -215,20 +369,34 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
                   <button
                     type="button"
-                    onClick={() => setIsFormOpen(false)}
-                    className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors text-sm sm:text-base"
+                    onClick={() => { resetForm(); setIsFormOpen(false); }}
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors text-sm sm:text-base disabled:opacity-50"
                   >
                     Batal
                   </button>
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-medium transition-all text-sm sm:text-base shadow-lg flex items-center justify-center"
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-medium transition-all text-sm sm:text-base shadow-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Kirim Pengajuan
+                    {isSubmitting ? (
+                      <>
+                        <svg className="animate-spin w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Mengirim...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Kirim Pengajuan
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

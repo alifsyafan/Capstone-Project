@@ -6,8 +6,8 @@ import { Permohonan } from "@/types";
 interface DetailPermohonanProps {
   permohonan: Permohonan;
   onBack: () => void;
-  onKirimBalasan: (permohonanId: string, balasan: string, status: 'disetujui' | 'ditolak') => void;
-  onProses: (permohonanId: string) => void;
+  onKirimBalasan: (permohonanId: string, balasan: string, status: 'disetujui' | 'ditolak') => void | Promise<void>;
+  onProses: (permohonanId: string) => void | Promise<void>;
 }
 
 export default function DetailPermohonan({ permohonan, onBack, onKirimBalasan, onProses }: DetailPermohonanProps) {

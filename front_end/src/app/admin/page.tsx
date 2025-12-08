@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminHeader from "@/components/admin/AdminHeader";
@@ -9,172 +9,242 @@ import DaftarPermohonan from "@/components/admin/DaftarPermohonan";
 import DetailPermohonan from "@/components/admin/DetailPermohonan";
 import KelolaPerizinan from "@/components/admin/KelolaPerizinan";
 import { Permohonan, JenisPerizinan, Notifikasi, StatistikDashboard } from "@/types";
-
-// Data dummy untuk demo
-const dummyJenisPerizinan: JenisPerizinan[] = [
-  { id: "1", nama: "Izin Penelitian", deskripsi: "Izin untuk melakukan penelitian di lingkungan Dinkes", persyaratan: ["Surat pengantar dari instansi", "Proposal penelitian", "KTP"], aktif: true, createdAt: new Date() },
-  { id: "2", nama: "Izin Pengambilan Data Awal", deskripsi: "Izin untuk survei pendahuluan", persyaratan: ["Surat pengantar", "Proposal"], aktif: true, createdAt: new Date() },
-  { id: "3", nama: "Izin Permohonan Magang", deskripsi: "Izin untuk PKL/Magang", persyaratan: ["Surat dari kampus", "CV", "Transkrip nilai"], aktif: true, createdAt: new Date() },
-  { id: "4", nama: "Izin Kepaniteraan Klinik (Coas)", deskripsi: "Izin untuk mahasiswa profesi kesehatan", persyaratan: ["Surat pengantar fakultas", "Logbook"], aktif: true, createdAt: new Date() },
-  { id: "5", nama: "Izin Kunjungan Lapangan", deskripsi: "Izin untuk kunjungan studi banding", persyaratan: ["Surat permohonan resmi", "Daftar peserta"], aktif: true, createdAt: new Date() },
-];
-
-const dummyPermohonan: Permohonan[] = [
-  {
-    id: "PRM001",
-    pemohon: { namaLengkap: "Ahmad Rizki", nomorTelepon: "081234567890", email: "ahmad@email.com", alamat: "Jl. Sudirman No. 123, Makassar" },
-    jenisPerizinan: "Izin Penelitian",
-    berkas: ["proposal.pdf", "surat_pengantar.pdf"],
-    catatan: "Penelitian tentang kesehatan masyarakat",
-    status: "baru",
-    tanggalMasuk: new Date("2025-12-08T10:00:00"),
-  },
-  {
-    id: "PRM002",
-    pemohon: { namaLengkap: "Siti Nurhaliza", nomorTelepon: "082345678901", email: "siti@email.com", alamat: "Jl. Pettarani No. 45, Makassar" },
-    jenisPerizinan: "Izin Permohonan Magang",
-    berkas: ["cv.pdf", "surat_kampus.pdf", "transkrip.pdf"],
-    status: "diproses",
-    tanggalMasuk: new Date("2025-12-07T14:30:00"),
-    tanggalDiproses: new Date("2025-12-08T09:00:00"),
-  },
-  {
-    id: "PRM003",
-    pemohon: { namaLengkap: "Budi Santoso", nomorTelepon: "083456789012", email: "budi@email.com", alamat: "Jl. AP Pettarani No. 78, Makassar" },
-    jenisPerizinan: "Izin Pengambilan Data Awal",
-    berkas: ["proposal.pdf"],
-    status: "disetujui",
-    tanggalMasuk: new Date("2025-12-05T11:00:00"),
-    tanggalDiproses: new Date("2025-12-06T10:00:00"),
-    tanggalSelesai: new Date("2025-12-07T15:00:00"),
-    balasanEmail: "Permohonan Anda telah disetujui. Silakan ambil surat izin di kantor kami.",
-  },
-  {
-    id: "PRM004",
-    pemohon: { namaLengkap: "Dewi Lestari", nomorTelepon: "084567890123", email: "dewi@email.com", alamat: "Jl. Boulevard No. 56, Makassar" },
-    jenisPerizinan: "Izin Kunjungan Lapangan",
-    berkas: ["surat_permohonan.pdf", "daftar_peserta.pdf"],
-    catatan: "Kunjungan dari Universitas Hasanuddin",
-    status: "baru",
-    tanggalMasuk: new Date("2025-12-08T08:15:00"),
-  },
-];
+import {
+  authAPI,
+  dashboardAPI,
+  permohonanAPI,
+  jenisPerizinanAPI,
+  notifikasiAPI,
+  mapPermohonanToFrontend,
+  mapJenisPerizinanToFrontend,
+  mapNotifikasiToFrontend,
+} from "@/lib/api";
 
 export default function AdminPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeMenu, setActiveMenu] = useState<string>("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [permohonanList, setPermohonanList] = useState<Permohonan[]>(dummyPermohonan);
-  const [jenisPerizinanList, setJenisPerizinanList] = useState<JenisPerizinan[]>(dummyJenisPerizinan);
+  const [permohonanList, setPermohonanList] = useState<Permohonan[]>([]);
+  const [jenisPerizinanList, setJenisPerizinanList] = useState<JenisPerizinan[]>([]);
   const [selectedPermohonan, setSelectedPermohonan] = useState<Permohonan | null>(null);
   const [notifikasi, setNotifikasi] = useState<Notifikasi[]>([]);
   const [showNotifikasi, setShowNotifikasi] = useState(false);
+  const [statistik, setStatistik] = useState<StatistikDashboard>({
+    totalPermohonan: 0,
+    permohonanBaru: 0,
+    permohonanDiproses: 0,
+    permohonanSelesai: 0,
+  });
 
   // Cek autentikasi
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem("adminLoggedIn");
-    if (isLoggedIn !== "true") {
-      router.push("/admin/login");
-    } else {
-      setIsAuthenticated(true);
-    }
+    const checkAuth = async () => {
+      const token = localStorage.getItem("adminToken");
+      const isLoggedIn = localStorage.getItem("adminLoggedIn");
+
+      if (!token || isLoggedIn !== "true") {
+        router.push("/admin/login");
+        return;
+      }
+
+      try {
+        const response = await authAPI.getProfile();
+        if (response.success) {
+          setIsAuthenticated(true);
+        } else {
+          authAPI.logout();
+          router.push("/admin/login");
+        }
+      } catch {
+        // Error koneksi, coba gunakan token yang ada
+        setIsAuthenticated(true);
+      }
+    };
+
+    checkAuth();
   }, [router]);
+
+  // Fetch data dari API
+  const fetchData = useCallback(async () => {
+    if (!isAuthenticated) return;
+
+    setIsLoading(true);
+    try {
+      // Fetch statistik
+      const statsResponse = await dashboardAPI.getStatistik();
+      if (statsResponse.success && statsResponse.data) {
+        setStatistik({
+          totalPermohonan: statsResponse.data.total_permohonan,
+          permohonanBaru: statsResponse.data.permohonan_baru,
+          permohonanDiproses: statsResponse.data.permohonan_diproses,
+          permohonanSelesai: statsResponse.data.permohonan_selesai,
+        });
+      }
+
+      // Fetch permohonan
+      const permohonanResponse = await permohonanAPI.getAll({ per_page: 100 });
+      if (permohonanResponse.success && permohonanResponse.data?.data) {
+        const mappedData = permohonanResponse.data.data.map(mapPermohonanToFrontend);
+        setPermohonanList(mappedData as Permohonan[]);
+      } else {
+        setPermohonanList([]);
+      }
+
+      // Fetch jenis perizinan
+      const jpResponse = await jenisPerizinanAPI.getAll(false);
+      if (jpResponse.success && jpResponse.data) {
+        const mappedData = jpResponse.data.map(mapJenisPerizinanToFrontend);
+        setJenisPerizinanList(mappedData);
+      }
+
+      // Fetch notifikasi
+      const notifResponse = await notifikasiAPI.getAll(false);
+      if (notifResponse.success && notifResponse.data) {
+        const mappedData = notifResponse.data.map(mapNotifikasiToFrontend);
+        setNotifikasi(mappedData);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated, fetchData]);
 
   // Handle logout
   const handleLogout = () => {
-    localStorage.removeItem("adminLoggedIn");
-    localStorage.removeItem("adminLoginTime");
+    authAPI.logout();
     router.push("/admin/login");
   };
 
-  // Statistik dashboard
-  const statistik: StatistikDashboard = {
-    totalPermohonan: permohonanList.length,
-    permohonanBaru: permohonanList.filter(p => p.status === "baru").length,
-    permohonanDiproses: permohonanList.filter(p => p.status === "diproses").length,
-    permohonanSelesai: permohonanList.filter(p => p.status === "disetujui" || p.status === "ditolak").length,
-  };
-
-  // Generate notifikasi dari permohonan baru
-  useEffect(() => {
-    const permohonanBaru = permohonanList.filter(p => p.status === "baru");
-    const newNotifikasi: Notifikasi[] = permohonanBaru.map(p => ({
-      id: `notif-${p.id}`,
-      pesan: `Permohonan baru dari ${p.pemohon.namaLengkap} - ${p.jenisPerizinan}`,
-      permohonanId: p.id,
-      dibaca: false,
-      tanggal: p.tanggalMasuk,
-    }));
-    setNotifikasi(newNotifikasi);
-  }, [permohonanList]);
-
   // Handle kirim balasan email
-  const handleKirimBalasan = (permohonanId: string, balasan: string, status: 'disetujui' | 'ditolak') => {
-    setPermohonanList(prev => 
-      prev.map(p => {
-        if (p.id === permohonanId) {
-          return {
-            ...p,
-            status,
-            balasanEmail: balasan,
-            tanggalSelesai: new Date(),
-          };
-        }
-        return p;
-      })
-    );
-    setSelectedPermohonan(null);
-    alert(`Email balasan telah dikirim ke pemohon!`);
+  const handleKirimBalasan = async (permohonanId: string, balasan: string, status: 'disetujui' | 'ditolak') => {
+    try {
+      const response = await permohonanAPI.kirimBalasan(permohonanId, {
+        balasan_email: balasan,
+        status: status,
+      });
+
+      if (response.success) {
+        alert("Email balasan telah dikirim ke pemohon!");
+        setSelectedPermohonan(null);
+        fetchData();
+      } else {
+        alert("Gagal mengirim balasan: " + response.message);
+      }
+    } catch {
+      alert("Gagal terhubung ke server");
+    }
   };
 
   // Handle proses permohonan
-  const handleProsesPermohonan = (permohonanId: string) => {
-    setPermohonanList(prev =>
-      prev.map(p => {
-        if (p.id === permohonanId) {
-          return {
-            ...p,
-            status: "diproses" as const,
-            tanggalDiproses: new Date(),
-          };
-        }
-        return p;
-      })
-    );
+  const handleProsesPermohonan = async (permohonanId: string) => {
+    try {
+      const response = await permohonanAPI.updateStatus(permohonanId, {
+        status: "diproses",
+      });
+
+      if (response.success) {
+        fetchData();
+      } else {
+        alert("Gagal memproses permohonan: " + response.message);
+      }
+    } catch {
+      alert("Gagal terhubung ke server");
+    }
   };
 
   // Handle tambah jenis perizinan
-  const handleTambahPerizinan = (perizinan: Omit<JenisPerizinan, 'id' | 'createdAt'>) => {
-    const newPerizinan: JenisPerizinan = {
-      ...perizinan,
-      id: `${jenisPerizinanList.length + 1}`,
-      createdAt: new Date(),
-    };
-    setJenisPerizinanList(prev => [...prev, newPerizinan]);
+  const handleTambahPerizinan = async (perizinan: Omit<JenisPerizinan, 'id' | 'createdAt'>) => {
+    try {
+      const response = await jenisPerizinanAPI.create({
+        nama: perizinan.nama,
+        deskripsi: perizinan.deskripsi,
+        persyaratan: perizinan.persyaratan,
+        aktif: perizinan.aktif,
+      });
+
+      if (response.success) {
+        fetchData();
+      } else {
+        alert("Gagal menambah perizinan: " + response.message);
+      }
+    } catch {
+      alert("Gagal terhubung ke server");
+    }
   };
 
   // Handle edit jenis perizinan
-  const handleEditPerizinan = (perizinan: JenisPerizinan) => {
-    setJenisPerizinanList(prev =>
-      prev.map(p => p.id === perizinan.id ? perizinan : p)
-    );
+  const handleEditPerizinan = async (perizinan: JenisPerizinan) => {
+    try {
+      const response = await jenisPerizinanAPI.update(perizinan.id, {
+        nama: perizinan.nama,
+        deskripsi: perizinan.deskripsi,
+        persyaratan: perizinan.persyaratan,
+        aktif: perizinan.aktif,
+      });
+
+      if (response.success) {
+        fetchData();
+      } else {
+        alert("Gagal mengupdate perizinan: " + response.message);
+      }
+    } catch {
+      alert("Gagal terhubung ke server");
+    }
   };
 
   // Handle hapus jenis perizinan
-  const handleHapusPerizinan = (id: string) => {
-    setJenisPerizinanList(prev => prev.filter(p => p.id !== id));
+  const handleHapusPerizinan = async (id: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus jenis perizinan ini?")) {
+      return;
+    }
+
+    try {
+      const response = await jenisPerizinanAPI.delete(id);
+
+      if (response.success) {
+        fetchData();
+      } else {
+        alert("Gagal menghapus perizinan: " + response.message);
+      }
+    } catch {
+      alert("Gagal terhubung ke server");
+    }
   };
 
   // Handle tandai notifikasi dibaca
-  const handleBacaNotifikasi = (notifId: string) => {
-    setNotifikasi(prev =>
-      prev.map(n => n.id === notifId ? { ...n, dibaca: true } : n)
-    );
+  const handleBacaNotifikasi = async (notifId: string) => {
+    try {
+      await notifikasiAPI.markAsRead(notifId);
+      setNotifikasi(prev =>
+        prev.map(n => n.id === notifId ? { ...n, dibaca: true } : n)
+      );
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
   };
 
   // Render konten berdasarkan menu aktif
   const renderContent = () => {
+    if (isLoading && permohonanList.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Memuat data...</p>
+          </div>
+        </div>
+      );
+    }
+
     if (selectedPermohonan) {
       return (
         <DetailPermohonan
@@ -246,7 +316,7 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Memuat...</p>
         </div>
       </div>
