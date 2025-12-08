@@ -62,6 +62,7 @@ func SetupRoutes(
 		protected.PATCH("/admin/notifikasi/read-all", notifikasiController.MarkAllAsRead)
 	}
 
-	// Serve uploaded files
+	// Serve uploaded files with download endpoint
+	router.GET("/download/:filename", permohonanController.DownloadFile)
 	router.Static("/uploads", "./uploads")
 }

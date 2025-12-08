@@ -16,11 +16,21 @@ export interface Pemohon {
   alamat: string;
 }
 
+export interface Berkas {
+  id: string;
+  nama_asli: string;
+  nama_file: string;
+  path: string;
+  ukuran: number;
+  tipe: string;
+}
+
 export interface Permohonan {
   id: string;
   pemohon: Pemohon;
   jenisPerizinan: string;
   berkas: string[];
+  berkasData?: Berkas[];
   catatan?: string;
   status: 'baru' | 'diproses' | 'disetujui' | 'ditolak';
   tanggalMasuk: Date;

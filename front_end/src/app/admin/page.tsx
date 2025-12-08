@@ -87,7 +87,7 @@ export default function AdminPage() {
       const permohonanResponse = await permohonanAPI.getAll({ per_page: 100 });
       if (permohonanResponse.success && permohonanResponse.data?.data) {
         const mappedData = permohonanResponse.data.data.map(mapPermohonanToFrontend);
-        setPermohonanList(mappedData as Permohonan[]);
+        setPermohonanList(mappedData as unknown as Permohonan[]);
       } else {
         setPermohonanList([]);
       }

@@ -525,6 +525,44 @@ func (c *PermohonanController) GetRecentPermohonan(ctx *gin.Context) {
 	})
 }
 
+func (c *PermohonanController) DownloadFile(ctx *gin.Context) {
+	filename := ctx.Param("filename")
+	originalName := ctx.Query("name")
+
+	if filename == "" {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Filename tidak valid",
+		})
+		return
+	}
+
+	filePath := filepath.Join(c.uploadPath, filename)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		ctx.JSON(http.StatusNotFound, dto.APIResponse{
+			Success: false,
+			Message: "File tidak ditemukan",
+		})
+		return
+	}
+
+	// Set download name
+	downloadName := filename
+	if originalName != "" {
+		downloadName = originalName
+	}
+
+	// Set headers for download
+	ctx.Header("Content-Description", "File Transfer")
+	ctx.Header("Content-Transfer-Encoding", "binary")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", downloadName))
+	ctx.Header("Content-Type", "application/octet-stream")
+
+	ctx.File(filePath)
+}
+
 // ============== Notifikasi Controller ==============
 
 type NotifikasiController struct {

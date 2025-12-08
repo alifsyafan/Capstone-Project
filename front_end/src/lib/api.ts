@@ -374,3 +374,9 @@ export const getFileUrl = (path: string): string => {
   const baseUrl = API_URL.replace('/api/v1', '');
   return `${baseUrl}/${path}`;
 };
+
+// Get file download URL with original filename
+export const getDownloadUrl = (filename: string, originalName: string): string => {
+  const baseUrl = API_URL.replace('/api/v1', '');
+  return `${baseUrl}/download/${filename}?name=${encodeURIComponent(originalName)}`;
+};

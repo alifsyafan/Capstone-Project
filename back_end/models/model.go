@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// StringArray custom type for PostgreSQL array
+// StringArray custom type for MySQL JSON
 type StringArray []string
 
 // Scan implements the sql.Scanner interface
@@ -19,10 +19,17 @@ func (s *StringArray) Scan(value interface{}) error {
 		*s = []string{}
 		return nil
 	}
-	bytes, ok := value.([]byte)
-	if !ok {
-		return errors.New("failed to scan StringArray")
+
+	var bytes []byte
+	switch v := value.(type) {
+	case []byte:
+		bytes = v
+	case string:
+		bytes = []byte(v)
+	default:
+		return errors.New("failed to scan StringArray: unsupported type")
 	}
+
 	return json.Unmarshal(bytes, s)
 }
 
@@ -34,9 +41,9 @@ func (s StringArray) Value() (driver.Value, error) {
 	return json.Marshal(s)
 }
 
-// Base model with UUID
+// Base model with UUID (stored as CHAR(36) in MySQL)
 type BaseModel struct {
-	ID        uuid.UUID      `gorm:"type:uuid;primary_key" json:"id"`
+	ID        uuid.UUID      `gorm:"type:char(36);primary_key" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
@@ -65,7 +72,7 @@ type JenisPerizinan struct {
 	BaseModel
 	Nama        string      `gorm:"not null;size:100" json:"nama"`
 	Deskripsi   string      `gorm:"type:text" json:"deskripsi"`
-	Persyaratan StringArray `gorm:"type:jsonb" json:"persyaratan"`
+	Persyaratan StringArray `gorm:"type:json" json:"persyaratan"`
 	Aktif       bool        `gorm:"default:true" json:"aktif"`
 }
 
@@ -91,9 +98,9 @@ const (
 // Permohonan model
 type Permohonan struct {
 	BaseModel
-	PemohonID        uuid.UUID        `gorm:"type:uuid;not null" json:"pemohon_id"`
+	PemohonID        uuid.UUID        `gorm:"type:char(36);not null" json:"pemohon_id"`
 	Pemohon          Pemohon          `gorm:"foreignKey:PemohonID" json:"pemohon"`
-	JenisPerizinanID uuid.UUID        `gorm:"type:uuid;not null" json:"jenis_perizinan_id"`
+	JenisPerizinanID uuid.UUID        `gorm:"type:char(36);not null" json:"jenis_perizinan_id"`
 	JenisPerizinan   JenisPerizinan   `gorm:"foreignKey:JenisPerizinanID" json:"jenis_perizinan"`
 	Berkas           []Berkas         `gorm:"foreignKey:PermohonanID" json:"berkas"`
 	Catatan          string           `gorm:"type:text" json:"catatan"`
@@ -103,14 +110,14 @@ type Permohonan struct {
 	TanggalSelesai   *time.Time       `json:"tanggal_selesai"`
 	BalasanEmail     string           `gorm:"type:text" json:"balasan_email"`
 	CatatanAdmin     string           `gorm:"type:text" json:"catatan_admin"`
-	DikelolaOleh     *uuid.UUID       `gorm:"type:uuid" json:"dikelola_oleh"`
+	DikelolaOleh     *uuid.UUID       `gorm:"type:char(36)" json:"dikelola_oleh"`
 	Admin            *Admin           `gorm:"foreignKey:DikelolaOleh" json:"admin,omitempty"`
 }
 
 // Berkas model for file uploads
 type Berkas struct {
 	BaseModel
-	PermohonanID uuid.UUID `gorm:"type:uuid;not null" json:"permohonan_id"`
+	PermohonanID uuid.UUID `gorm:"type:char(36);not null" json:"permohonan_id"`
 	NamaFile     string    `gorm:"not null;size:255" json:"nama_file"`
 	NamaAsli     string    `gorm:"not null;size:255" json:"nama_asli"`
 	Path         string    `gorm:"not null;size:500" json:"path"`
@@ -121,9 +128,9 @@ type Berkas struct {
 // Notifikasi model
 type Notifikasi struct {
 	BaseModel
-	AdminID      uuid.UUID  `gorm:"type:uuid;not null" json:"admin_id"`
+	AdminID      uuid.UUID  `gorm:"type:char(36);not null" json:"admin_id"`
 	Admin        Admin      `gorm:"foreignKey:AdminID" json:"-"`
-	PermohonanID uuid.UUID  `gorm:"type:uuid;not null" json:"permohonan_id"`
+	PermohonanID uuid.UUID  `gorm:"type:char(36);not null" json:"permohonan_id"`
 	Permohonan   Permohonan `gorm:"foreignKey:PermohonanID" json:"-"`
 	Pesan        string     `gorm:"type:text;not null" json:"pesan"`
 	Dibaca       bool       `gorm:"default:false" json:"dibaca"`
@@ -133,7 +140,7 @@ type Notifikasi struct {
 // EmailLog model for tracking sent emails
 type EmailLog struct {
 	BaseModel
-	PermohonanID uuid.UUID  `gorm:"type:uuid;not null" json:"permohonan_id"`
+	PermohonanID uuid.UUID  `gorm:"type:char(36);not null" json:"permohonan_id"`
 	EmailTujuan  string     `gorm:"not null;size:100" json:"email_tujuan"`
 	Subjek       string     `gorm:"not null;size:255" json:"subjek"`
 	Isi          string     `gorm:"type:text;not null" json:"isi"`

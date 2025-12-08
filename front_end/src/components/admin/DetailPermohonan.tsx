@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Permohonan } from "@/types";
+import { getDownloadUrl } from "@/lib/api";
 
 interface DetailPermohonanProps {
   permohonan: Permohonan;
@@ -175,19 +176,39 @@ Dinas Kesehatan Kota Makassar`;
               <div>
                 <p className="text-sm text-gray-500 mb-2">Berkas yang Dilampirkan</p>
                 <div className="space-y-2">
-                  {permohonan.berkas.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8.5 17v-6h1v6h-1zm2.5 0v-6h1.25c.69 0 1.25.56 1.25 1.25v3.5c0 .69-.56 1.25-1.25 1.25H11zm2.5-6h1.5v1h-1.5v2h1.5v1h-1.5v2h-1v-6h1.5z"/>
-                        </svg>
-                        <span className="text-sm font-medium text-gray-700">{file}</span>
+                  {permohonan.berkasData && permohonan.berkasData.length > 0 ? (
+                    permohonan.berkasData.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8.5 17v-6h1v6h-1zm2.5 0v-6h1.25c.69 0 1.25.56 1.25 1.25v3.5c0 .69-.56 1.25-1.25 1.25H11zm2.5-6h1.5v1h-1.5v2h1.5v1h-1.5v2h-1v-6h1.5z"/>
+                          </svg>
+                          <div>
+                            <span className="text-sm font-medium text-gray-700">{file.nama_asli}</span>
+                            <p className="text-xs text-gray-500">{(file.ukuran / 1024).toFixed(1)} KB</p>
+                          </div>
+                        </div>
+                        <a 
+                          href={getDownloadUrl(file.nama_file, file.nama_asli)}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          Unduh
+                        </a>
                       </div>
-                      <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                        Unduh
-                      </button>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    permohonan.berkas.map((fileName, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8.5 17v-6h1v6h-1zm2.5 0v-6h1.25c.69 0 1.25.56 1.25 1.25v3.5c0 .69-.56 1.25-1.25 1.25H11zm2.5-6h1.5v1h-1.5v2h1.5v1h-1.5v2h-1v-6h1.5z"/>
+                          </svg>
+                          <span className="text-sm font-medium text-gray-700">{fileName}</span>
+                        </div>
+                        <span className="text-gray-400 text-sm">-</span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
