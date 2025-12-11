@@ -256,6 +256,7 @@ func (s *permohonanService) Create(req dto.CreatePermohonanRequest, berkasFiles 
 
 	// Create permohonan
 	permohonan := &models.Permohonan{
+		NomorPermohonan:  models.GenerateNomorPermohonan(),
 		PemohonID:        pemohon.ID,
 		JenisPerizinanID: jpID,
 		Catatan:          req.Catatan,
@@ -362,7 +363,37 @@ func (s *permohonanService) UpdateStatus(id uuid.UUID, adminID uuid.UUID, req dt
 		p.TanggalSelesai = &now
 	}
 
-	return s.permohonanRepo.Update(p)
+	err = s.permohonanRepo.Update(p)
+	if err != nil {
+		return err
+	}
+
+	// Kirim email notifikasi saat status diproses
+	if req.Status == "diproses" {
+		emailBody := fmt.Sprintf(`Yth. %s,
+
+Dengan hormat,
+
+Permohonan %s Anda dengan nomor %s sedang dalam proses verifikasi.
+
+Kami akan menghubungi Anda kembali setelah proses verifikasi selesai.
+
+Terima kasih atas kesabaran Anda.
+
+Hormat kami,
+Dinas Kesehatan Kota Makassar`, p.Pemohon.NamaLengkap, p.JenisPerizinan.Nama, p.NomorPermohonan)
+
+		go s.emailService.SendBalasanEmail(
+			p.Pemohon.Email,
+			p.Pemohon.NamaLengkap,
+			p.JenisPerizinan.Nama,
+			emailBody,
+			"diproses",
+			p.ID,
+		)
+	}
+
+	return nil
 }
 
 func (s *permohonanService) KirimBalasan(id uuid.UUID, adminID uuid.UUID, req dto.KirimBalasanRequest) error {
@@ -433,7 +464,8 @@ func (s *permohonanService) mapPermohonanToResponse(p models.Permohonan) dto.Per
 	}
 
 	return dto.PermohonanResponse{
-		ID: p.ID,
+		ID:              p.ID,
+		NomorPermohonan: p.NomorPermohonan,
 		Pemohon: dto.PemohonResponse{
 			ID:           p.Pemohon.ID,
 			NamaLengkap:  p.Pemohon.NamaLengkap,
@@ -525,8 +557,10 @@ func NewEmailService(cfg *config.Config, emailLogRepo repositories.EmailLogRepos
 }
 
 func (s *emailService) SendBalasanEmail(toEmail, namaPemohon, jenisPerizinan, balasan, status string, permohonanID uuid.UUID) error {
-	statusText := "Disetujui"
-	if status == "ditolak" {
+	statusText := "Diproses"
+	if status == "disetujui" {
+		statusText = "Disetujui"
+	} else if status == "ditolak" {
 		statusText = "Ditolak"
 	}
 
@@ -593,8 +627,14 @@ func (s *emailService) SendBalasanEmail(toEmail, namaPemohon, jenisPerizinan, ba
 }
 
 func getStatusColor(status string) string {
-	if status == "disetujui" {
-		return "#10b981"
+	switch status {
+	case "disetujui":
+		return "#10b981" // green
+	case "diproses":
+		return "#3b82f6" // blue
+	case "ditolak":
+		return "#ef4444" // red
+	default:
+		return "#f59e0b" // yellow (baru)
 	}
-	return "#ef4444"
 }

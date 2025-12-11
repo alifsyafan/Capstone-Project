@@ -99,6 +99,7 @@ type BerkasResponse struct {
 
 type PermohonanResponse struct {
 	ID              uuid.UUID              `json:"id"`
+	NomorPermohonan string                 `json:"nomor_permohonan"`
 	Pemohon         PemohonResponse        `json:"pemohon"`
 	JenisPerizinan  JenisPerizinanResponse `json:"jenis_perizinan"`
 	Berkas          []BerkasResponse       `json:"berkas"`

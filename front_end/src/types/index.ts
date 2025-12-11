@@ -27,6 +27,7 @@ export interface Berkas {
 
 export interface Permohonan {
   id: string;
+  nomorPermohonan: string;
   pemohon: Pemohon;
   jenisPerizinan: string;
   berkas: string[];

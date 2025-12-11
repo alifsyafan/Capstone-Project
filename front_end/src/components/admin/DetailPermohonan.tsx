@@ -63,7 +63,7 @@ export default function DetailPermohonan({ permohonan, onBack, onKirimBalasan, o
 
 Dengan hormat,
 
-Permohonan ${permohonan.jenisPerizinan} Anda dengan nomor ${permohonan.id} telah kami SETUJUI.
+Permohonan ${permohonan.jenisPerizinan} Anda dengan nomor ${permohonan.nomorPermohonan} telah kami SETUJUI.
 
 Silakan mengambil surat izin di kantor Dinas Kesehatan Kota Makassar pada hari dan jam kerja dengan membawa:
 1. KTP asli
@@ -81,7 +81,7 @@ Dinas Kesehatan Kota Makassar`;
 
 Dengan hormat,
 
-Mohon maaf, permohonan ${permohonan.jenisPerizinan} Anda dengan nomor ${permohonan.id} TIDAK DAPAT kami setujui.
+Mohon maaf, permohonan ${permohonan.jenisPerizinan} Anda dengan nomor ${permohonan.nomorPermohonan} TIDAK DAPAT kami setujui.
 
 Alasan penolakan: [Silakan isi alasan]
 
@@ -109,7 +109,7 @@ Dinas Kesehatan Kota Makassar`;
           </button>
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Detail Permohonan</h2>
-            <p className="text-gray-500">ID: {permohonan.id}</p>
+            <p className="text-gray-500">No. Permohonan: {permohonan.nomorPermohonan}</p>
           </div>
         </div>
         {getStatusBadge(permohonan.status)}

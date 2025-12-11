@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -98,6 +99,7 @@ const (
 // Permohonan model
 type Permohonan struct {
 	BaseModel
+	NomorPermohonan  string           `gorm:"uniqueIndex;size:10;not null" json:"nomor_permohonan"`
 	PemohonID        uuid.UUID        `gorm:"type:char(36);not null" json:"pemohon_id"`
 	Pemohon          Pemohon          `gorm:"foreignKey:PemohonID" json:"pemohon"`
 	JenisPerizinanID uuid.UUID        `gorm:"type:char(36);not null" json:"jenis_perizinan_id"`
@@ -112,6 +114,11 @@ type Permohonan struct {
 	CatatanAdmin     string           `gorm:"type:text" json:"catatan_admin"`
 	DikelolaOleh     *uuid.UUID       `gorm:"type:char(36)" json:"dikelola_oleh"`
 	Admin            *Admin           `gorm:"foreignKey:DikelolaOleh" json:"admin,omitempty"`
+}
+
+// GenerateNomorPermohonan generates a unique 10 digit number
+func GenerateNomorPermohonan() string {
+	return fmt.Sprintf("%010d", time.Now().UnixNano()%10000000000)
 }
 
 // Berkas model for file uploads

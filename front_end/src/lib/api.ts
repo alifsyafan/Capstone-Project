@@ -158,6 +158,7 @@ export interface BerkasData {
 
 export interface PermohonanData {
   id: string;
+  nomor_permohonan: string;
   pemohon: PemohonData;
   jenis_perizinan: JenisPerizinanData;
   berkas: BerkasData[];
@@ -328,6 +329,7 @@ export const notifikasiAPI = {
 export const mapPermohonanToFrontend = (data: PermohonanData) => {
   return {
     id: data.id,
+    nomorPermohonan: data.nomor_permohonan,
     pemohon: {
       namaLengkap: data.pemohon.nama_lengkap,
       nomorTelepon: data.pemohon.nomor_telepon,
