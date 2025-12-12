@@ -197,7 +197,7 @@ type PermohonanService interface {
 	GetByID(id uuid.UUID) (*dto.PermohonanResponse, error)
 	GetByStatus(status string) ([]dto.PermohonanResponse, error)
 	UpdateStatus(id uuid.UUID, adminID uuid.UUID, req dto.UpdatePermohonanStatusRequest) error
-	KirimBalasan(id uuid.UUID, adminID uuid.UUID, req dto.KirimBalasanRequest) error
+	KirimBalasan(id uuid.UUID, adminID uuid.UUID, balasanEmail, status, attachmentPath string) error
 	GetStatistik() (*dto.StatistikDashboard, error)
 	GetRecentPermohonan(limit int) ([]dto.PermohonanResponse, error)
 }
@@ -390,21 +390,22 @@ Dinas Kesehatan Kota Makassar`, p.Pemohon.NamaLengkap, p.JenisPerizinan.Nama, p.
 			emailBody,
 			"diproses",
 			p.ID,
+			"", // no attachment
 		)
 	}
 
 	return nil
 }
 
-func (s *permohonanService) KirimBalasan(id uuid.UUID, adminID uuid.UUID, req dto.KirimBalasanRequest) error {
+func (s *permohonanService) KirimBalasan(id uuid.UUID, adminID uuid.UUID, balasanEmail, status, attachmentPath string) error {
 	p, err := s.permohonanRepo.FindByID(id)
 	if err != nil {
 		return err
 	}
 
 	// Update permohonan status
-	p.Status = models.StatusPermohonan(req.Status)
-	p.BalasanEmail = req.BalasanEmail
+	p.Status = models.StatusPermohonan(status)
+	p.BalasanEmail = balasanEmail
 	p.DikelolaOleh = &adminID
 	now := time.Now()
 	p.TanggalSelesai = &now
@@ -414,8 +415,8 @@ func (s *permohonanService) KirimBalasan(id uuid.UUID, adminID uuid.UUID, req dt
 		return err
 	}
 
-	// Send email
-	go s.emailService.SendBalasanEmail(p.Pemohon.Email, p.Pemohon.NamaLengkap, p.JenisPerizinan.Nama, req.BalasanEmail, req.Status, p.ID)
+	// Send email with optional attachment
+	go s.emailService.SendBalasanEmail(p.Pemohon.Email, p.Pemohon.NamaLengkap, p.JenisPerizinan.Nama, balasanEmail, status, p.ID, attachmentPath)
 
 	return nil
 }
@@ -544,7 +545,7 @@ func (s *notifikasiService) CountUnread(adminID uuid.UUID) (int64, error) {
 // ============== Email Service ==============
 
 type EmailService interface {
-	SendBalasanEmail(toEmail, namaPemohon, jenisPerizinan, balasan, status string, permohonanID uuid.UUID) error
+	SendBalasanEmail(toEmail, namaPemohon, jenisPerizinan, balasan, status string, permohonanID uuid.UUID, attachmentPath string) error
 }
 
 type emailService struct {
@@ -556,7 +557,7 @@ func NewEmailService(cfg *config.Config, emailLogRepo repositories.EmailLogRepos
 	return &emailService{cfg: cfg, emailLogRepo: emailLogRepo}
 }
 
-func (s *emailService) SendBalasanEmail(toEmail, namaPemohon, jenisPerizinan, balasan, status string, permohonanID uuid.UUID) error {
+func (s *emailService) SendBalasanEmail(toEmail, namaPemohon, jenisPerizinan, balasan, status string, permohonanID uuid.UUID, attachmentPath string) error {
 	statusText := "Diproses"
 	if status == "disetujui" {
 		statusText = "Disetujui"
@@ -565,6 +566,12 @@ func (s *emailService) SendBalasanEmail(toEmail, namaPemohon, jenisPerizinan, ba
 	}
 
 	subject := fmt.Sprintf("Balasan Permohonan %s - %s", jenisPerizinan, statusText)
+
+	// Tambahkan informasi lampiran jika ada
+	attachmentInfo := ""
+	if attachmentPath != "" {
+		attachmentInfo = `<p style="color: #666; font-size: 14px; margin-top: 15px;">📎 <strong>Surat balasan terlampir pada email ini.</strong></p>`
+	}
 
 	body := fmt.Sprintf(`
 		<html>
@@ -580,6 +587,7 @@ func (s *emailService) SendBalasanEmail(toEmail, namaPemohon, jenisPerizinan, ba
 						<p><strong>Status: %s</strong></p>
 						<p>%s</p>
 					</div>
+					%s
 					<p>Jika ada pertanyaan lebih lanjut, silakan hubungi kami.</p>
 					<hr style="margin: 20px 0;">
 					<p style="color: #666; font-size: 12px;">
@@ -589,7 +597,7 @@ func (s *emailService) SendBalasanEmail(toEmail, namaPemohon, jenisPerizinan, ba
 			</div>
 		</body>
 		</html>
-	`, namaPemohon, jenisPerizinan, getStatusColor(status), statusText, balasan)
+	`, namaPemohon, jenisPerizinan, getStatusColor(status), statusText, balasan, attachmentInfo)
 
 	// Create email log entry
 	emailLog := &models.EmailLog{
@@ -607,6 +615,11 @@ func (s *emailService) SendBalasanEmail(toEmail, namaPemohon, jenisPerizinan, ba
 	m.SetHeader("To", toEmail)
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/html", body)
+
+	// Attach file if provided
+	if attachmentPath != "" {
+		m.Attach(attachmentPath)
+	}
 
 	d := gomail.NewDialer(s.cfg.SMTPHost, port, s.cfg.SMTPUsername, s.cfg.SMTPPassword)
 

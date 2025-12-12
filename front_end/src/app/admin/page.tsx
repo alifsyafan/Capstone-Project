@@ -125,12 +125,12 @@ export default function AdminPage() {
   };
 
   // Handle kirim balasan email
-  const handleKirimBalasan = async (permohonanId: string, balasan: string, status: 'disetujui' | 'ditolak') => {
+  const handleKirimBalasan = async (permohonanId: string, balasan: string, status: 'disetujui' | 'ditolak', lampiran?: File) => {
     try {
       const response = await permohonanAPI.kirimBalasan(permohonanId, {
         balasan_email: balasan,
         status: status,
-      });
+      }, lampiran);
 
       if (response.success) {
         alert("Email balasan telah dikirim ke pemohon!");

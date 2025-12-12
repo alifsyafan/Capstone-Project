@@ -465,17 +465,66 @@ func (c *PermohonanController) KirimBalasan(ctx *gin.Context) {
 		return
 	}
 
-	var req dto.KirimBalasanRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	// Get form data
+	balasanEmail := ctx.PostForm("balasan_email")
+	status := ctx.PostForm("status")
+
+	if balasanEmail == "" || status == "" {
 		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
 			Success: false,
-			Message: "Data tidak valid",
-			Error:   err.Error(),
+			Message: "balasan_email dan status harus diisi",
 		})
 		return
 	}
 
-	err = c.service.KirimBalasan(id, adminID.(uuid.UUID), req)
+	if status != "disetujui" && status != "ditolak" {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "status harus disetujui atau ditolak",
+		})
+		return
+	}
+
+	// Handle optional file attachment
+	attachmentPath := ""
+	file, err := ctx.FormFile("lampiran")
+	if err == nil && file != nil {
+		// Validate file type
+		ext := filepath.Ext(file.Filename)
+		allowedExts := map[string]bool{".pdf": true, ".doc": true, ".docx": true}
+		if !allowedExts[ext] {
+			ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+				Success: false,
+				Message: "Format file tidak didukung. Gunakan PDF, DOC, atau DOCX",
+			})
+			return
+		}
+
+		// Create surat folder if not exists
+		suratDir := "uploads/surat"
+		if err := os.MkdirAll(suratDir, 0755); err != nil {
+			ctx.JSON(http.StatusInternalServerError, dto.APIResponse{
+				Success: false,
+				Message: "Gagal membuat folder surat",
+			})
+			return
+		}
+
+		// Generate unique filename
+		filename := fmt.Sprintf("%d_%s%s", time.Now().Unix(), id.String()[:8], ext)
+		attachmentPath = filepath.Join(suratDir, filename)
+
+		// Save file
+		if err := ctx.SaveUploadedFile(file, attachmentPath); err != nil {
+			ctx.JSON(http.StatusInternalServerError, dto.APIResponse{
+				Success: false,
+				Message: "Gagal menyimpan file lampiran",
+			})
+			return
+		}
+	}
+
+	err = c.service.KirimBalasan(id, adminID.(uuid.UUID), balasanEmail, status, attachmentPath)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, dto.APIResponse{
 			Success: false,

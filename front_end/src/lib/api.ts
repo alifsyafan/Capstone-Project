@@ -254,11 +254,17 @@ export const permohonanAPI = {
     return response.json();
   },
 
-  kirimBalasan: async (id: string, data: KirimBalasanRequest): Promise<APIResponse> => {
+  kirimBalasan: async (id: string, data: KirimBalasanRequest, lampiran?: File): Promise<APIResponse> => {
+    const formData = new FormData();
+    formData.append('balasan_email', data.balasan_email);
+    formData.append('status', data.status);
+    if (lampiran) {
+      formData.append('lampiran', lampiran);
+    }
+
     const response = await authFetch(`${API_URL}/admin/permohonan/${id}/balasan`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: formData,
     });
     return response.json();
   },

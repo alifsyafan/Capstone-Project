@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Permohonan } from "@/types";
 import { getDownloadUrl } from "@/lib/api";
 
 interface DetailPermohonanProps {
   permohonan: Permohonan;
   onBack: () => void;
-  onKirimBalasan: (permohonanId: string, balasan: string, status: 'disetujui' | 'ditolak') => void | Promise<void>;
+  onKirimBalasan: (permohonanId: string, balasan: string, status: 'disetujui' | 'ditolak', lampiran?: File) => void | Promise<void>;
   onProses: (permohonanId: string) => void | Promise<void>;
 }
 
@@ -16,6 +16,8 @@ export default function DetailPermohonan({ permohonan, onBack, onKirimBalasan, o
   const [balasanText, setBalasanText] = useState("");
   const [statusBalasan, setStatusBalasan] = useState<'disetujui' | 'ditolak'>('disetujui');
   const [catatanAdmin, setCatatanAdmin] = useState("");
+  const [lampiran, setLampiran] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatTanggal = (date: Date) => {
     return new Date(date).toLocaleDateString('id-ID', {
@@ -53,9 +55,13 @@ export default function DetailPermohonan({ permohonan, onBack, onKirimBalasan, o
       alert("Mohon isi pesan balasan terlebih dahulu");
       return;
     }
-    onKirimBalasan(permohonan.id, balasanText, statusBalasan);
+    onKirimBalasan(permohonan.id, balasanText, statusBalasan, lampiran || undefined);
     setShowBalasanModal(false);
     setBalasanText("");
+    setLampiran(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   // Template email balasan
@@ -418,6 +424,51 @@ Dinas Kesehatan Kota Makassar`;
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 resize-none"
                     placeholder="Catatan untuk arsip internal..."
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Lampiran Surat Balasan (Opsional)
+                  </label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => setLampiran(e.target.files?.[0] || null)}
+                      className="hidden"
+                      id="lampiran-file"
+                    />
+                    <label
+                      htmlFor="lampiran-file"
+                      className="flex items-center px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
+                      <svg className="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      </svg>
+                      <span className="text-gray-700">Pilih File</span>
+                    </label>
+                    {lampiran && (
+                      <div className="flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="text-sm text-blue-700 max-w-[200px] truncate">{lampiran.name}</span>
+                        <button
+                          onClick={() => {
+                            setLampiran(null);
+                            if (fileInputRef.current) fileInputRef.current.value = "";
+                          }}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Format: PDF, DOC, DOCX (Maks. 5MB)</p>
                 </div>
               </div>
             </div>
