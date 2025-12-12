@@ -197,7 +197,7 @@ type PermohonanService interface {
 	GetByID(id uuid.UUID) (*dto.PermohonanResponse, error)
 	GetByStatus(status string) ([]dto.PermohonanResponse, error)
 	UpdateStatus(id uuid.UUID, adminID uuid.UUID, req dto.UpdatePermohonanStatusRequest) error
-	KirimBalasan(id uuid.UUID, adminID uuid.UUID, balasanEmail, status, attachmentPath string) error
+	KirimBalasan(id uuid.UUID, adminID uuid.UUID, balasanEmail, status, attachmentPath, catatanAdmin string) error
 	GetStatistik() (*dto.StatistikDashboard, error)
 	GetRecentPermohonan(limit int) ([]dto.PermohonanResponse, error)
 }
@@ -397,7 +397,7 @@ Dinas Kesehatan Kota Makassar`, p.Pemohon.NamaLengkap, p.JenisPerizinan.Nama, p.
 	return nil
 }
 
-func (s *permohonanService) KirimBalasan(id uuid.UUID, adminID uuid.UUID, balasanEmail, status, attachmentPath string) error {
+func (s *permohonanService) KirimBalasan(id uuid.UUID, adminID uuid.UUID, balasanEmail, status, attachmentPath, catatanAdmin string) error {
 	p, err := s.permohonanRepo.FindByID(id)
 	if err != nil {
 		return err
@@ -406,6 +406,8 @@ func (s *permohonanService) KirimBalasan(id uuid.UUID, adminID uuid.UUID, balasa
 	// Update permohonan status
 	p.Status = models.StatusPermohonan(status)
 	p.BalasanEmail = balasanEmail
+	p.CatatanAdmin = catatanAdmin
+	p.LampiranSurat = attachmentPath
 	p.DikelolaOleh = &adminID
 	now := time.Now()
 	p.TanggalSelesai = &now
@@ -490,6 +492,7 @@ func (s *permohonanService) mapPermohonanToResponse(p models.Permohonan) dto.Per
 		TanggalSelesai:  p.TanggalSelesai,
 		BalasanEmail:    p.BalasanEmail,
 		CatatanAdmin:    p.CatatanAdmin,
+		LampiranSurat:   p.LampiranSurat,
 		CreatedAt:       p.CreatedAt,
 	}
 }

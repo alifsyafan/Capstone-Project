@@ -32,40 +32,42 @@ export default function AdminHeader({
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-      <div className="flex items-center justify-between px-6 py-4">
+      <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
+        {/* Title */}
         <div>
-          <h1 className="text-xl font-bold text-gray-800">Panel Admin</h1>
-          <p className="text-sm text-gray-500">Dinas Kesehatan Kota Makassar</p>
+          <h1 className="text-lg sm:text-xl font-bold text-gray-800">Panel Admin</h1>
+          <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Dinas Kesehatan Kota Makassar</p>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-1 sm:gap-2">
           {/* Notifikasi */}
           <div className="relative">
             <button
               onClick={onToggleNotifikasi}
-              className="relative p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+              title="Notifikasi"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
               {notifikasiBelumDibaca > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {notifikasiBelumDibaca}
+                <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-medium rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                  {notifikasiBelumDibaca > 9 ? '9+' : notifikasiBelumDibaca}
                 </span>
               )}
             </button>
 
             {/* Dropdown Notifikasi */}
             {showNotifikasi && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50">
+              <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden z-50">
                 <div className="px-4 py-3 bg-blue-50 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-800">Notifikasi</h3>
+                  <h3 className="font-semibold text-gray-800 text-sm sm:text-base">Notifikasi</h3>
                   <p className="text-xs text-gray-500">{notifikasiBelumDibaca} notifikasi belum dibaca</p>
                 </div>
-                <div className="max-h-80 overflow-y-auto">
+                <div className="max-h-64 sm:max-h-80 overflow-y-auto">
                   {notifikasi.length === 0 ? (
                     <div className="px-4 py-8 text-center text-gray-500">
-                      <svg className="w-12 h-12 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                       </svg>
                       <p className="text-sm">Tidak ada notifikasi</p>
@@ -85,7 +87,7 @@ export default function AdminHeader({
                         <div className="flex items-start space-x-3">
                           <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${!notif.dibaca ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-sm ${!notif.dibaca ? 'font-medium text-gray-800' : 'text-gray-600'}`}>
+                            <p className={`text-xs sm:text-sm ${!notif.dibaca ? 'font-medium text-gray-800' : 'text-gray-600'}`}>
                               {notif.pesan}
                             </p>
                             <p className="text-xs text-gray-400 mt-1">{formatTanggal(notif.tanggal)}</p>
@@ -99,19 +101,22 @@ export default function AdminHeader({
             )}
           </div>
 
+          {/* Divider */}
+          <div className="w-px h-6 bg-gray-200 mx-1 sm:mx-2"></div>
+
           {/* Profile */}
-          <div className="flex items-center space-x-3 pl-4 border-l border-gray-200">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">
               A
             </div>
             <div className="hidden sm:block">
-              <p className="text-sm font-medium text-gray-800">Admin</p>
+              <p className="text-sm font-medium text-gray-800 leading-tight">Admin</p>
               <p className="text-xs text-gray-500">Administrator</p>
             </div>
             {onLogout && (
               <button
                 onClick={onLogout}
-                className="ml-2 p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                 title="Keluar"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

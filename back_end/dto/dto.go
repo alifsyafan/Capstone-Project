@@ -110,6 +110,7 @@ type PermohonanResponse struct {
 	TanggalSelesai  *time.Time             `json:"tanggal_selesai"`
 	BalasanEmail    string                 `json:"balasan_email"`
 	CatatanAdmin    string                 `json:"catatan_admin"`
+	LampiranSurat   string                 `json:"lampiran_surat"`
 	CreatedAt       time.Time              `json:"created_at"`
 }
 

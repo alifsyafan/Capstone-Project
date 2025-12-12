@@ -468,6 +468,7 @@ func (c *PermohonanController) KirimBalasan(ctx *gin.Context) {
 	// Get form data
 	balasanEmail := ctx.PostForm("balasan_email")
 	status := ctx.PostForm("status")
+	catatanAdmin := ctx.PostForm("catatan_admin")
 
 	if balasanEmail == "" || status == "" {
 		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
@@ -524,7 +525,7 @@ func (c *PermohonanController) KirimBalasan(ctx *gin.Context) {
 		}
 	}
 
-	err = c.service.KirimBalasan(id, adminID.(uuid.UUID), balasanEmail, status, attachmentPath)
+	err = c.service.KirimBalasan(id, adminID.(uuid.UUID), balasanEmail, status, attachmentPath, catatanAdmin)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, dto.APIResponse{
 			Success: false,

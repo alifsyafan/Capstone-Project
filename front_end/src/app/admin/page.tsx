@@ -31,6 +31,8 @@ export default function AdminPage() {
   const [selectedPermohonan, setSelectedPermohonan] = useState<Permohonan | null>(null);
   const [notifikasi, setNotifikasi] = useState<Notifikasi[]>([]);
   const [showNotifikasi, setShowNotifikasi] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [statistik, setStatistik] = useState<StatistikDashboard>({
     totalPermohonan: 0,
     permohonanBaru: 0,
@@ -125,17 +127,28 @@ export default function AdminPage() {
   };
 
   // Handle kirim balasan email
-  const handleKirimBalasan = async (permohonanId: string, balasan: string, status: 'disetujui' | 'ditolak', lampiran?: File) => {
+  const handleKirimBalasan = async (permohonanId: string, balasan: string, status: 'disetujui' | 'ditolak', lampiran?: File, catatanAdmin?: string) => {
     try {
       const response = await permohonanAPI.kirimBalasan(permohonanId, {
         balasan_email: balasan,
         status: status,
+        catatan_admin: catatanAdmin,
       }, lampiran);
 
       if (response.success) {
-        alert("Email balasan telah dikirim ke pemohon!");
+        const statusText = status === 'disetujui' ? 'disetujui' : 'ditolak';
+        setSuccessMessage(`Permohonan telah ${statusText} dan email balasan telah dikirim ke pemohon!`);
+        setShowSuccessModal(true);
+        
+        // Tandai notifikasi terkait permohonan ini sebagai dibaca
+        const relatedNotif = notifikasi.find(n => n.permohonanId === permohonanId && !n.dibaca);
+        if (relatedNotif) {
+          await notifikasiAPI.markAsRead(relatedNotif.id);
+        }
+        
         setSelectedPermohonan(null);
-        fetchData();
+        await fetchData();
+        setActiveMenu("riwayat");
       } else {
         alert("Gagal mengirim balasan: " + response.message);
       }
@@ -152,7 +165,20 @@ export default function AdminPage() {
       });
 
       if (response.success) {
-        fetchData();
+        // Tampilkan pesan sukses
+        setSuccessMessage("Permohonan berhasil diproses! Email notifikasi telah dikirim ke pemohon.");
+        setShowSuccessModal(true);
+        
+        // Tandai notifikasi terkait permohonan ini sebagai dibaca
+        const relatedNotif = notifikasi.find(n => n.permohonanId === permohonanId && !n.dibaca);
+        if (relatedNotif) {
+          await notifikasiAPI.markAsRead(relatedNotif.id);
+        }
+        
+        // Refresh data dan arahkan ke halaman "Sedang Diproses"
+        await fetchData();
+        setSelectedPermohonan(null);
+        setActiveMenu("permohonan-diproses");
       } else {
         alert("Gagal memproses permohonan: " + response.message);
       }
@@ -323,19 +349,25 @@ export default function AdminPage() {
     );
   }
 
+  // Handler untuk menu sidebar - reset selectedPermohonan saat berpindah menu
+  const handleMenuClick = (menu: string) => {
+    setActiveMenu(menu);
+    setSelectedPermohonan(null); // Reset detail permohonan saat berpindah menu
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* Sidebar */}
       <AdminSidebar
         activeMenu={activeMenu}
-        onMenuClick={setActiveMenu}
+        onMenuClick={handleMenuClick}
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         jumlahPermohonanBaru={statistik.permohonanBaru}
       />
 
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-20'}`}>
+      <div className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'md:ml-64' : 'md:ml-20'} ml-0`}>
         {/* Header */}
         <AdminHeader
           notifikasi={notifikasi}
@@ -353,10 +385,33 @@ export default function AdminPage() {
         />
 
         {/* Content */}
-        <main className="p-6">
+        <main className="p-3 sm:p-4 md:p-6">
           {renderContent()}
         </main>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Berhasil!</h3>
+              <p className="text-gray-600 mb-6">{successMessage}</p>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

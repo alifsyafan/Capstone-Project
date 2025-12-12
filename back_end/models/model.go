@@ -112,6 +112,7 @@ type Permohonan struct {
 	TanggalSelesai   *time.Time       `json:"tanggal_selesai"`
 	BalasanEmail     string           `gorm:"type:text" json:"balasan_email"`
 	CatatanAdmin     string           `gorm:"type:text" json:"catatan_admin"`
+	LampiranSurat    string           `gorm:"type:varchar(500)" json:"lampiran_surat"`
 	DikelolaOleh     *uuid.UUID       `gorm:"type:char(36)" json:"dikelola_oleh"`
 	Admin            *Admin           `gorm:"foreignKey:DikelolaOleh" json:"admin,omitempty"`
 }

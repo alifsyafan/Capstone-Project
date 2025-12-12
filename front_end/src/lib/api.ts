@@ -169,6 +169,7 @@ export interface PermohonanData {
   tanggal_selesai?: string;
   balasan_email?: string;
   catatan_admin?: string;
+  lampiran_surat?: string;
   created_at: string;
 }
 
@@ -197,6 +198,7 @@ export interface UpdateStatusRequest {
 export interface KirimBalasanRequest {
   balasan_email: string;
   status: 'disetujui' | 'ditolak';
+  catatan_admin?: string;
 }
 
 export const permohonanAPI = {
@@ -258,6 +260,9 @@ export const permohonanAPI = {
     const formData = new FormData();
     formData.append('balasan_email', data.balasan_email);
     formData.append('status', data.status);
+    if (data.catatan_admin) {
+      formData.append('catatan_admin', data.catatan_admin);
+    }
     if (lampiran) {
       formData.append('lampiran', lampiran);
     }
@@ -353,6 +358,7 @@ export const mapPermohonanToFrontend = (data: PermohonanData) => {
     tanggalSelesai: data.tanggal_selesai ? new Date(data.tanggal_selesai) : undefined,
     balasanEmail: data.balasan_email,
     catatanAdmin: data.catatan_admin,
+    lampiranSurat: data.lampiran_surat,
   };
 };
 

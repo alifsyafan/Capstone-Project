@@ -39,6 +39,7 @@ export interface Permohonan {
   tanggalSelesai?: Date;
   balasanEmail?: string;
   catatanAdmin?: string;
+  lampiranSurat?: string;
 }
 
 export interface Notifikasi {
