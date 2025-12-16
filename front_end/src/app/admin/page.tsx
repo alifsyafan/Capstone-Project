@@ -382,6 +382,7 @@ export default function AdminPage() {
             }
           }}
           onLogout={handleLogout}
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
         {/* Content */}

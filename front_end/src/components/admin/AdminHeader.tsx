@@ -9,6 +9,7 @@ interface AdminHeaderProps {
   onBacaNotifikasi: (notifId: string) => void;
   onLihatPermohonan: (permohonanId: string) => void;
   onLogout?: () => void;
+  onToggleSidebar?: () => void;
 }
 
 export default function AdminHeader({ 
@@ -17,7 +18,8 @@ export default function AdminHeader({
   onToggleNotifikasi, 
   onBacaNotifikasi,
   onLihatPermohonan,
-  onLogout
+  onLogout,
+  onToggleSidebar
 }: AdminHeaderProps) {
   const notifikasiBelumDibaca = notifikasi.filter(n => !n.dibaca).length;
 
@@ -33,10 +35,26 @@ export default function AdminHeader({
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
       <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4">
-        {/* Title */}
-        <div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-800">Panel Admin</h1>
-          <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Dinas Kesehatan Kota Makassar</p>
+        {/* Mobile Hamburger + Title */}
+        <div className="flex items-center gap-3">
+          {/* Hamburger button for mobile */}
+          {onToggleSidebar && (
+            <button
+              onClick={onToggleSidebar}
+              className="md:hidden w-9 h-9 flex items-center justify-center text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+              title="Menu"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          )}
+          
+          {/* Title */}
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-800">Panel Admin</h1>
+            <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Dinas Kesehatan Kota Makassar</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
