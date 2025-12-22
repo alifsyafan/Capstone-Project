@@ -1,6 +1,6 @@
 "use client";
 
-import { Notifikasi } from "@/types";
+import { Notifikasi, AdminRole } from "@/types";
 
 interface AdminHeaderProps {
   notifikasi: Notifikasi[];
@@ -10,6 +10,8 @@ interface AdminHeaderProps {
   onLihatPermohonan: (permohonanId: string) => void;
   onLogout?: () => void;
   onToggleSidebar?: () => void;
+  adminName?: string;
+  adminRole?: AdminRole;
 }
 
 export default function AdminHeader({ 
@@ -19,7 +21,9 @@ export default function AdminHeader({
   onBacaNotifikasi,
   onLihatPermohonan,
   onLogout,
-  onToggleSidebar
+  onToggleSidebar,
+  adminName = "Admin",
+  adminRole = "admin"
 }: AdminHeaderProps) {
   const notifikasiBelumDibaca = notifikasi.filter(n => !n.dibaca).length;
 
@@ -125,11 +129,11 @@ export default function AdminHeader({
           {/* Profile */}
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">
-              A
+              {adminName.charAt(0).toUpperCase()}
             </div>
             <div className="hidden sm:block">
-              <p className="text-sm font-medium text-gray-800 leading-tight">Admin</p>
-              <p className="text-xs text-gray-500">Administrator</p>
+              <p className="text-sm font-medium text-gray-800 leading-tight">{adminName}</p>
+              <p className="text-xs text-gray-500">{adminRole === "super_admin" ? "Super Admin" : "Administrator"}</p>
             </div>
             {onLogout && (
               <button

@@ -47,6 +47,7 @@ export interface LoginResponse {
     username: string;
     email: string;
     nama_lengkap: string;
+    role: 'super_admin' | 'admin';
   };
 }
 
@@ -393,4 +394,122 @@ export const getFileUrl = (path: string): string => {
 export const getDownloadUrl = (filename: string, originalName: string): string => {
   const baseUrl = API_URL.replace('/api/v1', '');
   return `${baseUrl}/download/${filename}?name=${encodeURIComponent(originalName)}`;
+};
+
+// ============== Admin Management API ==============
+
+export interface AdminData {
+  id: string;
+  username: string;
+  email: string;
+  nama_lengkap: string;
+  role: 'super_admin' | 'admin';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminListResponse {
+  data: AdminData[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+export interface CreateAdminRequest {
+  username: string;
+  password: string;
+  email: string;
+  nama_lengkap: string;
+  role: 'super_admin' | 'admin';
+}
+
+export interface UpdateAdminRequest {
+  username?: string;
+  email?: string;
+  nama_lengkap?: string;
+  role?: 'super_admin' | 'admin';
+  is_active?: boolean;
+}
+
+export interface ResetPasswordRequest {
+  new_password: string;
+}
+
+export interface ChangePasswordRequest {
+  old_password: string;
+  new_password: string;
+}
+
+export const adminAPI = {
+  getAll: async (page: number = 1, perPage: number = 10, search?: string): Promise<APIResponse<AdminListResponse>> => {
+    let url = `${API_URL}/admin/admins?page=${page}&per_page=${perPage}`;
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+    const response = await authFetch(url);
+    return response.json();
+  },
+
+  getById: async (id: string): Promise<APIResponse<AdminData>> => {
+    const response = await authFetch(`${API_URL}/admin/admins/${id}`);
+    return response.json();
+  },
+
+  create: async (data: CreateAdminRequest): Promise<APIResponse<AdminData>> => {
+    const response = await authFetch(`${API_URL}/admin/admins`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  },
+
+  update: async (id: string, data: UpdateAdminRequest): Promise<APIResponse<AdminData>> => {
+    const response = await authFetch(`${API_URL}/admin/admins/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  },
+
+  delete: async (id: string): Promise<APIResponse> => {
+    const response = await authFetch(`${API_URL}/admin/admins/${id}`, {
+      method: 'DELETE',
+    });
+    return response.json();
+  },
+
+  resetPassword: async (id: string, data: ResetPasswordRequest): Promise<APIResponse> => {
+    const response = await authFetch(`${API_URL}/admin/admins/${id}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  },
+
+  changePassword: async (data: ChangePasswordRequest): Promise<APIResponse> => {
+    const response = await authFetch(`${API_URL}/auth/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  },
+};
+
+export const mapAdminToFrontend = (data: AdminData) => {
+  return {
+    id: data.id,
+    username: data.username,
+    email: data.email,
+    namaLengkap: data.nama_lengkap,
+    role: data.role,
+    isActive: data.is_active,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+  };
 };

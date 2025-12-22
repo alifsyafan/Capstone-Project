@@ -267,17 +267,6 @@ export default function AdminLogin() {
                 )}
               </button>
             </form>
-
-            {/* Demo Credentials Info */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <p className="text-xs text-blue-600 text-center mb-2 font-medium">
-                Demo Credentials:
-              </p>
-              <div className="text-xs text-blue-700 text-center space-y-1">
-                <p>Username: <code className="bg-blue-100 px-2 py-0.5 rounded">admin</code></p>
-                <p>Password: <code className="bg-blue-100 px-2 py-0.5 rounded">admin123</code></p>
-              </div>
-            </div>
           </div>
         </div>
 

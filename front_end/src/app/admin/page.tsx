@@ -8,17 +8,31 @@ import Dashboard from "@/components/admin/Dashboard";
 import DaftarPermohonan from "@/components/admin/DaftarPermohonan";
 import DetailPermohonan from "@/components/admin/DetailPermohonan";
 import KelolaPerizinan from "@/components/admin/KelolaPerizinan";
-import { Permohonan, JenisPerizinan, Notifikasi, StatistikDashboard } from "@/types";
+import KelolaAdmin from "@/components/admin/KelolaAdmin";
+import { Permohonan, JenisPerizinan, Notifikasi, StatistikDashboard, AdminRole } from "@/types";
 import {
   authAPI,
   dashboardAPI,
   permohonanAPI,
   jenisPerizinanAPI,
   notifikasiAPI,
+  adminAPI,
   mapPermohonanToFrontend,
   mapJenisPerizinanToFrontend,
   mapNotifikasiToFrontend,
+  mapAdminToFrontend,
 } from "@/lib/api";
+
+// Admin type for frontend
+interface Admin {
+  id: string;
+  username: string;
+  email: string;
+  namaLengkap: string;
+  role: 'super_admin' | 'admin';
+  isActive: boolean;
+  createdAt: Date;
+}
 
 export default function AdminPage() {
   const router = useRouter();
@@ -33,6 +47,11 @@ export default function AdminPage() {
   const [showNotifikasi, setShowNotifikasi] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [adminRole, setAdminRole] = useState<AdminRole>("admin");
+  const [currentAdminId, setCurrentAdminId] = useState<string>("");
+  const [adminName, setAdminName] = useState<string>("Admin");
+  const [adminUsername, setAdminUsername] = useState<string>("");
+  const [adminList, setAdminList] = useState<Admin[]>([]);
   const [statistik, setStatistik] = useState<StatistikDashboard>({
     totalPermohonan: 0,
     permohonanBaru: 0,
@@ -53,14 +72,29 @@ export default function AdminPage() {
 
       try {
         const response = await authAPI.getProfile();
-        if (response.success) {
+        if (response.success && response.data) {
           setIsAuthenticated(true);
+          // Set role and id from response
+          setAdminRole(response.data.role || "admin");
+          setCurrentAdminId(response.data.id);
+          setAdminName(response.data.nama_lengkap || response.data.username || "Admin");
+          setAdminUsername(response.data.username || "");
         } else {
           authAPI.logout();
           router.push("/admin/login");
         }
       } catch {
-        // Error koneksi, coba gunakan token yang ada
+        // Error koneksi, coba gunakan data dari localStorage
+        const adminData = localStorage.getItem("adminData");
+        if (adminData) {
+          try {
+            const parsed = JSON.parse(adminData);
+            setAdminRole(parsed.role || "admin");
+            setCurrentAdminId(parsed.id || "");
+          } catch {
+            setAdminRole("admin");
+          }
+        }
         setIsAuthenticated(true);
       }
     };
@@ -107,12 +141,21 @@ export default function AdminPage() {
         const mappedData = notifResponse.data.map(mapNotifikasiToFrontend);
         setNotifikasi(mappedData);
       }
+
+      // Fetch admin list (only for super_admin)
+      if (adminRole === "super_admin") {
+        const adminResponse = await adminAPI.getAll(1, 100);
+        if (adminResponse.success && adminResponse.data?.data) {
+          const mappedData = adminResponse.data.data.map(mapAdminToFrontend);
+          setAdminList(mappedData as Admin[]);
+        }
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, adminRole]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -246,6 +289,83 @@ export default function AdminPage() {
     }
   };
 
+  // Handle tambah admin
+  const handleTambahAdmin = async (admin: Omit<Admin, 'id' | 'createdAt' | 'isActive'> & { password: string }) => {
+    try {
+      const response = await adminAPI.create({
+        username: admin.username,
+        email: admin.email,
+        nama_lengkap: admin.namaLengkap,
+        role: admin.role,
+        password: admin.password,
+      });
+
+      if (response.success) {
+        setSuccessMessage("Admin berhasil ditambahkan!");
+        setShowSuccessModal(true);
+        fetchData();
+      } else {
+        alert("Gagal menambah admin: " + response.message);
+      }
+    } catch {
+      alert("Gagal terhubung ke server");
+    }
+  };
+
+  // Handle edit admin
+  const handleEditAdmin = async (id: string, admin: Partial<Admin>) => {
+    try {
+      const response = await adminAPI.update(id, {
+        username: admin.username,
+        email: admin.email,
+        nama_lengkap: admin.namaLengkap,
+        role: admin.role,
+        is_active: admin.isActive,
+      });
+
+      if (response.success) {
+        fetchData();
+      } else {
+        alert("Gagal mengupdate admin: " + response.message);
+      }
+    } catch {
+      alert("Gagal terhubung ke server");
+    }
+  };
+
+  // Handle hapus admin
+  const handleHapusAdmin = async (id: string) => {
+    try {
+      const response = await adminAPI.delete(id);
+
+      if (response.success) {
+        setSuccessMessage("Admin berhasil dihapus!");
+        setShowSuccessModal(true);
+        fetchData();
+      } else {
+        alert("Gagal menghapus admin: " + response.message);
+      }
+    } catch {
+      alert("Gagal terhubung ke server");
+    }
+  };
+
+  // Handle reset password admin
+  const handleResetPasswordAdmin = async (id: string, newPassword: string) => {
+    try {
+      const response = await adminAPI.resetPassword(id, { new_password: newPassword });
+
+      if (response.success) {
+        setSuccessMessage("Password berhasil direset!");
+        setShowSuccessModal(true);
+      } else {
+        alert("Gagal mereset password: " + response.message);
+      }
+    } catch {
+      alert("Gagal terhubung ke server");
+    }
+  };
+
   // Handle tandai notifikasi dibaca
   const handleBacaNotifikasi = async (notifId: string) => {
     try {
@@ -332,6 +452,31 @@ export default function AdminPage() {
             onHapus={handleHapusPerizinan}
           />
         );
+      case "kelola-admin":
+        // Only super_admin can access this page
+        if (adminRole !== "super_admin") {
+          return (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">Akses Ditolak</h3>
+              <p className="text-gray-600">Anda tidak memiliki izin untuk mengakses halaman ini. Hanya Super Admin yang dapat mengelola admin.</p>
+            </div>
+          );
+        }
+        return (
+          <KelolaAdmin
+            adminList={adminList}
+            onTambah={handleTambahAdmin}
+            onEdit={handleEditAdmin}
+            onHapus={handleHapusAdmin}
+            onResetPassword={handleResetPasswordAdmin}
+            currentAdminId={currentAdminId}
+          />
+        );
       default:
         return <Dashboard statistik={statistik} permohonanTerbaru={permohonanList.slice(0, 5)} onLihatDetail={(permohonan: Permohonan) => setSelectedPermohonan(permohonan)} />;
     }
@@ -364,6 +509,7 @@ export default function AdminPage() {
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         jumlahPermohonanBaru={statistik.permohonanBaru}
+        adminRole={adminRole}
       />
 
       {/* Main Content */}
@@ -383,6 +529,8 @@ export default function AdminPage() {
           }}
           onLogout={handleLogout}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          adminName={adminName}
+          adminRole={adminRole}
         />
 
         {/* Content */}

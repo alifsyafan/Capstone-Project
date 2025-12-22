@@ -1,5 +1,17 @@
 // Types untuk aplikasi perizinan
 
+// Admin Role type
+export type AdminRole = 'super_admin' | 'admin';
+
+// Admin Info type
+export interface AdminInfo {
+  id: string;
+  username: string;
+  email: string;
+  nama_lengkap: string;
+  role: AdminRole;
+}
+
 export interface JenisPerizinan {
   id: string;
   nama: string;
