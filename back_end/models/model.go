@@ -58,14 +58,23 @@ func (base *BaseModel) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+// RoleAdmin enum
+type RoleAdmin string
+
+const (
+	RoleSuperAdmin RoleAdmin = "super_admin"
+	RoleAdminUser  RoleAdmin = "admin"
+)
+
 // Admin model for authentication
 type Admin struct {
 	BaseModel
-	Username    string `gorm:"uniqueIndex;not null;size:50" json:"username"`
-	Password    string `gorm:"not null" json:"-"`
-	Email       string `gorm:"uniqueIndex;not null;size:100" json:"email"`
-	NamaLengkap string `gorm:"size:100" json:"nama_lengkap"`
-	IsActive    bool   `gorm:"default:true" json:"is_active"`
+	Username    string    `gorm:"uniqueIndex;not null;size:50" json:"username"`
+	Password    string    `gorm:"not null" json:"-"`
+	Email       string    `gorm:"uniqueIndex;not null;size:100" json:"email"`
+	NamaLengkap string    `gorm:"size:100" json:"nama_lengkap"`
+	Role        RoleAdmin `gorm:"type:varchar(20);default:'admin'" json:"role"`
+	IsActive    bool      `gorm:"default:true" json:"is_active"`
 }
 
 // JenisPerizinan model

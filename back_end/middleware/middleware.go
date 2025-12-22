@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/alifsyafan/backend-capston/dto"
+	"github.com/alifsyafan/backend-capston/models"
 	"github.com/alifsyafan/backend-capston/services"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -70,9 +71,50 @@ func AuthMiddleware(authService services.AuthService) gin.HandlerFunc {
 			return
 		}
 
-		// Set admin_id in context
+		// Extract role from claims
+		role, _ := (*claims)["role"].(string)
+
+		// Set admin_id, username, and role in context
 		ctx.Set("admin_id", adminID)
 		ctx.Set("username", (*claims)["username"])
+		ctx.Set("role", role)
+
+		ctx.Next()
+	}
+}
+
+// RoleMiddleware checks if the user has the required role
+func RoleMiddleware(allowedRoles ...models.RoleAdmin) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		roleStr, exists := ctx.Get("role")
+		if !exists {
+			ctx.JSON(http.StatusForbidden, dto.APIResponse{
+				Success: false,
+				Message: "Akses ditolak: role tidak ditemukan",
+			})
+			ctx.Abort()
+			return
+		}
+
+		userRole := models.RoleAdmin(roleStr.(string))
+
+		// Check if user's role is in allowed roles
+		allowed := false
+		for _, role := range allowedRoles {
+			if userRole == role {
+				allowed = true
+				break
+			}
+		}
+
+		if !allowed {
+			ctx.JSON(http.StatusForbidden, dto.APIResponse{
+				Success: false,
+				Message: "Akses ditolak: Anda tidak memiliki izin untuk mengakses fitur ini",
+			})
+			ctx.Abort()
+			return
+		}
 
 		ctx.Next()
 	}

@@ -13,6 +13,7 @@ type AdminRepository interface {
 	FindByID(id uuid.UUID) (*models.Admin, error)
 	FindByUsername(username string) (*models.Admin, error)
 	FindByEmail(email string) (*models.Admin, error)
+	FindAllPaginated(offset, limit int, search string) ([]models.Admin, int64, error)
 	Update(admin *models.Admin) error
 	Delete(id uuid.UUID) error
 }
@@ -54,6 +55,30 @@ func (r *adminRepository) FindByEmail(email string) (*models.Admin, error) {
 		return nil, err
 	}
 	return &admin, nil
+}
+
+func (r *adminRepository) FindAllPaginated(offset, limit int, search string) ([]models.Admin, int64, error) {
+	var admins []models.Admin
+	var total int64
+
+	query := r.db.Model(&models.Admin{})
+
+	if search != "" {
+		searchPattern := "%" + search + "%"
+		query = query.Where("username LIKE ? OR email LIKE ? OR nama_lengkap LIKE ?", searchPattern, searchPattern, searchPattern)
+	}
+
+	err := query.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	err = query.Order("created_at DESC").Offset(offset).Limit(limit).Find(&admins).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return admins, total, nil
 }
 
 func (r *adminRepository) Update(admin *models.Admin) error {

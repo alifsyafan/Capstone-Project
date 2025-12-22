@@ -79,7 +79,243 @@ func (c *AuthController) GetProfile(ctx *gin.Context) {
 			Username:    admin.Username,
 			Email:       admin.Email,
 			NamaLengkap: admin.NamaLengkap,
+			Role:        string(admin.Role),
 		},
+	})
+}
+
+// ============== Admin Management Controller ==============
+
+type AdminController struct {
+	service services.AdminService
+}
+
+func NewAdminController(service services.AdminService) *AdminController {
+	return &AdminController{service: service}
+}
+
+func (c *AdminController) Create(ctx *gin.Context) {
+	var req dto.CreateAdminRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Data tidak valid",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	admin, err := c.service.Create(req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Gagal membuat admin",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, dto.APIResponse{
+		Success: true,
+		Message: "Admin berhasil dibuat",
+		Data:    admin,
+	})
+}
+
+func (c *AdminController) GetAll(ctx *gin.Context) {
+	var query dto.PaginationQuery
+	if err := ctx.ShouldBindQuery(&query); err != nil {
+		query.Page = 1
+		query.PerPage = 10
+	}
+
+	if query.Page < 1 {
+		query.Page = 1
+	}
+
+	result, err := c.service.GetAll(query)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, dto.APIResponse{
+			Success: false,
+			Message: "Gagal mengambil data admin",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Data:    result,
+	})
+}
+
+func (c *AdminController) GetByID(ctx *gin.Context) {
+	id, err := uuid.Parse(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "ID tidak valid",
+		})
+		return
+	}
+
+	admin, err := c.service.GetByID(id)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, dto.APIResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Data:    admin,
+	})
+}
+
+func (c *AdminController) Update(ctx *gin.Context) {
+	id, err := uuid.Parse(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "ID tidak valid",
+		})
+		return
+	}
+
+	var req dto.UpdateAdminRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Data tidak valid",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	admin, err := c.service.Update(id, req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Gagal mengupdate admin",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Message: "Admin berhasil diupdate",
+		Data:    admin,
+	})
+}
+
+func (c *AdminController) Delete(ctx *gin.Context) {
+	id, err := uuid.Parse(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "ID tidak valid",
+		})
+		return
+	}
+
+	// Prevent deleting self
+	currentAdminID, _ := ctx.Get("admin_id")
+	if currentAdminID.(uuid.UUID) == id {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Tidak dapat menghapus akun sendiri",
+		})
+		return
+	}
+
+	err = c.service.Delete(id)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Gagal menghapus admin",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Message: "Admin berhasil dihapus",
+	})
+}
+
+func (c *AdminController) ResetPassword(ctx *gin.Context) {
+	id, err := uuid.Parse(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "ID tidak valid",
+		})
+		return
+	}
+
+	var req dto.ResetPasswordRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Data tidak valid",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	err = c.service.ResetPassword(id, req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Gagal mereset password",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Message: "Password berhasil direset",
+	})
+}
+
+func (c *AdminController) ChangePassword(ctx *gin.Context) {
+	adminID, exists := ctx.Get("admin_id")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, dto.APIResponse{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	var req dto.ChangePasswordRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Data tidak valid",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	err := c.service.ChangePassword(adminID.(uuid.UUID), req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Message: "Gagal mengubah password",
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Message: "Password berhasil diubah",
 	})
 }
 

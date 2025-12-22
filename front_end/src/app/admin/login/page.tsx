@@ -273,7 +273,7 @@ export default function AdminLogin() {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-gray-500 text-sm">
-            © 2024 Dinas Kesehatan Kota Makassar
+            © 2025 Dinas Kesehatan Kota Makassar
           </p>
           <a
             href="/"

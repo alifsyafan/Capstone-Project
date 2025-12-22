@@ -55,6 +55,7 @@ func (s *authService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"admin_id": admin.ID.String(),
 		"username": admin.Username,
+		"role":     string(admin.Role),
 		"exp":      expiresAt.Unix(),
 	})
 
@@ -71,6 +72,7 @@ func (s *authService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 			Username:    admin.Username,
 			Email:       admin.Email,
 			NamaLengkap: admin.NamaLengkap,
+			Role:        string(admin.Role),
 		},
 	}, nil
 }
@@ -96,6 +98,196 @@ func (s *authService) ValidateToken(tokenString string) (*jwt.MapClaims, error) 
 
 func (s *authService) GetAdminByID(id uuid.UUID) (*models.Admin, error) {
 	return s.adminRepo.FindByID(id)
+}
+
+// ============== Admin Management Service ==============
+
+type AdminService interface {
+	Create(req dto.CreateAdminRequest) (*dto.AdminResponse, error)
+	GetAll(query dto.PaginationQuery) (*dto.AdminListResponse, error)
+	GetByID(id uuid.UUID) (*dto.AdminResponse, error)
+	Update(id uuid.UUID, req dto.UpdateAdminRequest) (*dto.AdminResponse, error)
+	Delete(id uuid.UUID) error
+	ResetPassword(id uuid.UUID, req dto.ResetPasswordRequest) error
+	ChangePassword(id uuid.UUID, req dto.ChangePasswordRequest) error
+}
+
+type adminService struct {
+	repo repositories.AdminRepository
+}
+
+func NewAdminService(repo repositories.AdminRepository) AdminService {
+	return &adminService{repo: repo}
+}
+
+func (s *adminService) Create(req dto.CreateAdminRequest) (*dto.AdminResponse, error) {
+	// Check if username already exists
+	existing, _ := s.repo.FindByUsername(req.Username)
+	if existing != nil {
+		return nil, errors.New("username sudah digunakan")
+	}
+
+	// Check if email already exists
+	existing, _ = s.repo.FindByEmail(req.Email)
+	if existing != nil {
+		return nil, errors.New("email sudah digunakan")
+	}
+
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, errors.New("gagal mengenkripsi password")
+	}
+
+	admin := &models.Admin{
+		Username:    req.Username,
+		Password:    string(hashedPassword),
+		Email:       req.Email,
+		NamaLengkap: req.NamaLengkap,
+		Role:        models.RoleAdmin(req.Role),
+		IsActive:    true,
+	}
+
+	err = s.repo.Create(admin)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.toAdminResponse(admin), nil
+}
+
+func (s *adminService) GetAll(query dto.PaginationQuery) (*dto.AdminListResponse, error) {
+	admins, total, err := s.repo.FindAllPaginated(query.GetOffset(), query.GetLimit(), query.Search)
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []dto.AdminResponse
+	for _, admin := range admins {
+		responses = append(responses, *s.toAdminResponse(&admin))
+	}
+
+	totalPages := int(total) / query.GetLimit()
+	if int(total)%query.GetLimit() > 0 {
+		totalPages++
+	}
+
+	return &dto.AdminListResponse{
+		Data:       responses,
+		Total:      total,
+		Page:       query.Page,
+		PerPage:    query.GetLimit(),
+		TotalPages: totalPages,
+	}, nil
+}
+
+func (s *adminService) GetByID(id uuid.UUID) (*dto.AdminResponse, error) {
+	admin, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, errors.New("admin tidak ditemukan")
+	}
+	return s.toAdminResponse(admin), nil
+}
+
+func (s *adminService) Update(id uuid.UUID, req dto.UpdateAdminRequest) (*dto.AdminResponse, error) {
+	admin, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, errors.New("admin tidak ditemukan")
+	}
+
+	// Check username uniqueness if changed
+	if req.Username != "" && req.Username != admin.Username {
+		existing, _ := s.repo.FindByUsername(req.Username)
+		if existing != nil {
+			return nil, errors.New("username sudah digunakan")
+		}
+		admin.Username = req.Username
+	}
+
+	// Check email uniqueness if changed
+	if req.Email != "" && req.Email != admin.Email {
+		existing, _ := s.repo.FindByEmail(req.Email)
+		if existing != nil {
+			return nil, errors.New("email sudah digunakan")
+		}
+		admin.Email = req.Email
+	}
+
+	if req.NamaLengkap != "" {
+		admin.NamaLengkap = req.NamaLengkap
+	}
+
+	if req.Role != "" {
+		admin.Role = models.RoleAdmin(req.Role)
+	}
+
+	if req.IsActive != nil {
+		admin.IsActive = *req.IsActive
+	}
+
+	err = s.repo.Update(admin)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.toAdminResponse(admin), nil
+}
+
+func (s *adminService) Delete(id uuid.UUID) error {
+	_, err := s.repo.FindByID(id)
+	if err != nil {
+		return errors.New("admin tidak ditemukan")
+	}
+	return s.repo.Delete(id)
+}
+
+func (s *adminService) ResetPassword(id uuid.UUID, req dto.ResetPasswordRequest) error {
+	admin, err := s.repo.FindByID(id)
+	if err != nil {
+		return errors.New("admin tidak ditemukan")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return errors.New("gagal mengenkripsi password")
+	}
+
+	admin.Password = string(hashedPassword)
+	return s.repo.Update(admin)
+}
+
+func (s *adminService) ChangePassword(id uuid.UUID, req dto.ChangePasswordRequest) error {
+	admin, err := s.repo.FindByID(id)
+	if err != nil {
+		return errors.New("admin tidak ditemukan")
+	}
+
+	// Verify old password
+	err = bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(req.OldPassword))
+	if err != nil {
+		return errors.New("password lama tidak sesuai")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return errors.New("gagal mengenkripsi password")
+	}
+
+	admin.Password = string(hashedPassword)
+	return s.repo.Update(admin)
+}
+
+func (s *adminService) toAdminResponse(admin *models.Admin) *dto.AdminResponse {
+	return &dto.AdminResponse{
+		ID:          admin.ID,
+		Username:    admin.Username,
+		Email:       admin.Email,
+		NamaLengkap: admin.NamaLengkap,
+		Role:        string(admin.Role),
+		IsActive:    admin.IsActive,
+		CreatedAt:   admin.CreatedAt,
+		UpdatedAt:   admin.UpdatedAt,
+	}
 }
 
 // ============== Jenis Perizinan Service ==============

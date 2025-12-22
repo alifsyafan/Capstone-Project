@@ -13,6 +13,7 @@ import (
 	"github.com/alifsyafan/backend-capston/services"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -43,6 +44,9 @@ func main() {
 	}
 	log.Println("✅ Database migrated successfully")
 
+	// Run role migration for existing admins
+	migrateAdminRoles(db)
+
 	// Initialize repositories
 	adminRepo := repositories.NewAdminRepository(db)
 	jpRepo := repositories.NewJenisPerizinanRepository(db)
@@ -59,6 +63,7 @@ func main() {
 
 	// Initialize services
 	authService := services.NewAuthService(adminRepo, cfg)
+	adminService := services.NewAdminService(adminRepo)
 	jpService := services.NewJenisPerizinanService(jpRepo)
 	emailService := services.NewEmailService(cfg, emailLogRepo)
 	permohonanService := services.NewPermohonanService(permohonanRepo, pemohonRepo, jpRepo, notifRepo, adminRepo, emailService)
@@ -66,6 +71,7 @@ func main() {
 
 	// Initialize controllers
 	authController := controllers.NewAuthController(authService)
+	adminController := controllers.NewAdminController(adminService)
 	jpController := controllers.NewJenisPerizinanController(jpService)
 	permohonanController := controllers.NewPermohonanController(permohonanService, cfg.UploadPath)
 	notifController := controllers.NewNotifikasiController(notifService)
@@ -86,6 +92,7 @@ func main() {
 		jpController,
 		permohonanController,
 		notifController,
+		adminController,
 		authService,
 	)
 
@@ -127,6 +134,7 @@ func createDefaultAdmin(adminRepo repositories.AdminRepository, cfg *config.Conf
 		Password:    string(hashedPassword),
 		Email:       cfg.AdminEmail,
 		NamaLengkap: "Administrator",
+		Role:        models.RoleSuperAdmin, // Set default admin as super_admin
 		IsActive:    true,
 	}
 
@@ -136,9 +144,27 @@ func createDefaultAdmin(adminRepo repositories.AdminRepository, cfg *config.Conf
 		return
 	}
 
-	log.Println("✅ Default admin created successfully")
+	log.Println("✅ Default admin created successfully (Role: Super Admin)")
 	log.Printf("   Username: %s", cfg.AdminUsername)
 	log.Printf("   Password: %s", cfg.AdminPassword)
+}
+
+// migrateAdminRoles migrates existing admins without role to super_admin
+func migrateAdminRoles(db *gorm.DB) {
+	// Update all admins with empty or null role to super_admin
+	result := db.Model(&models.Admin{}).
+		Where("role IS NULL OR role = '' OR role = 'admin'").
+		Where("username = ?", "admin"). // Only update the first/default admin
+		Update("role", models.RoleSuperAdmin)
+
+	if result.Error != nil {
+		log.Printf("Warning: Failed to migrate admin roles: %v", result.Error)
+		return
+	}
+
+	if result.RowsAffected > 0 {
+		log.Printf("✅ Migrated %d admin(s) to super_admin role", result.RowsAffected)
+	}
 }
 
 func createDefaultJenisPerizinan(jpRepo repositories.JenisPerizinanRepository) {

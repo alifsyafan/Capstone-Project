@@ -24,6 +24,7 @@ type AdminInfo struct {
 	Username    string    `json:"username"`
 	Email       string    `json:"email"`
 	NamaLengkap string    `json:"nama_lengkap"`
+	Role        string    `json:"role"`
 }
 
 // ============== Jenis Perizinan DTOs ==============
@@ -145,6 +146,52 @@ type NotifikasiResponse struct {
 
 type MarkNotifikasiReadRequest struct {
 	NotifikasiIDs []string `json:"notifikasi_ids" binding:"required"`
+}
+
+// ============== Admin Management DTOs ==============
+
+type CreateAdminRequest struct {
+	Username    string `json:"username" binding:"required,min=3,max=50"`
+	Password    string `json:"password" binding:"required,min=6"`
+	Email       string `json:"email" binding:"required,email"`
+	NamaLengkap string `json:"nama_lengkap" binding:"required"`
+	Role        string `json:"role" binding:"required,oneof=super_admin admin"`
+}
+
+type UpdateAdminRequest struct {
+	Username    string `json:"username" binding:"omitempty,min=3,max=50"`
+	Email       string `json:"email" binding:"omitempty,email"`
+	NamaLengkap string `json:"nama_lengkap"`
+	Role        string `json:"role" binding:"omitempty,oneof=super_admin admin"`
+	IsActive    *bool  `json:"is_active"`
+}
+
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6"`
+}
+
+type ResetPasswordRequest struct {
+	NewPassword string `json:"new_password" binding:"required,min=6"`
+}
+
+type AdminResponse struct {
+	ID          uuid.UUID `json:"id"`
+	Username    string    `json:"username"`
+	Email       string    `json:"email"`
+	NamaLengkap string    `json:"nama_lengkap"`
+	Role        string    `json:"role"`
+	IsActive    bool      `json:"is_active"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type AdminListResponse struct {
+	Data       []AdminResponse `json:"data"`
+	Total      int64           `json:"total"`
+	Page       int             `json:"page"`
+	PerPage    int             `json:"per_page"`
+	TotalPages int             `json:"total_pages"`
 }
 
 // ============== Common DTOs ==============
