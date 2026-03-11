@@ -130,10 +130,10 @@ Setelah pertama kali menjalankan aplikasi, sistem akan otomatis membuat akun Sup
 
 | No | Nama | NIM | Role |
 |----|------|-----|------|
-| 1 | Muhammad Alif Syafan | 105841104722 | Backend Development |
+| 1 | Muhammad Alif Syafan | 105841114422 | Backend Development |
 | 2 | Ahmad Fathir | 105841105922 | Frontend Development |
 | 3 | Syahrul Ramadhan | 105841113722 | UI/UX Design |
-| 4 | Muhammad Aditya Yudistira | 105841104122 | UI/UX Design |
+| 4 | Muhammad Aditya Yudistira | 105841114122 | UI/UX Design |
 
 ## 📄 Lisensi
 
